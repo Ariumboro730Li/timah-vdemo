@@ -1,0 +1,63 @@
+MODUL DAN FITUR APLIKASI MOBILE 2: PEMOHON & MITRA BINAAN (EKSTERNAL)
+Aplikasi Terintegrasi CSR / TJSL / PPM / PUMK
+(Berdasarkan Dokumen KAK CSR)
+
+Aplikasi ini ditujukan untuk pemangku kepentingan eksternal: masyarakat pemohon bantuan sosial/TJSL, kelompok masyarakat binaan, pelaku Usaha Mikro dan Kecil (UMK) mitra PUMK, pengurus koperasi, serta mitra pelaksana program (LSM, universitas, vendor).
+
+================================================================================
+KARAKTERISTIK TEKNIS UTAMA
+================================================================================
+- Platform: Mobile Native/Hybrid (Android dan iOS).
+- User-Friendly & Ringan: Antarmuka aplikasi yang sederhana, intuitif, dan mudah dipahami oleh masyarakat umum dan pelaku usaha mikro.
+- Real-Time Push Notification: Pemberitahuan seketika untuk pembaruan status proposal bantuan, persetujuan pinjaman, tagihan angsuran, dan jadwal pelatihan.
+- Mobile Document Capture: Fitur pemindaian dokumen fisik (KTP, legalitas, proposal, kuitansi) secara langsung menggunakan kamera ponsel.
+- Integrasi Pembayaran Digital: Terhubung dengan sistem Virtual Account perbankan untuk kemudahan transaksi angsuran pinjaman.
+
+================================================================================
+MODUL DAN FITUR FUNGSIONAL
+================================================================================
+
+1. REGISTRASI AKUN & VERIFIKASI IDENTITAS (E-KYC)
+- Pendaftaran Akun Mandiri: Registrasi pengguna berbasis nomor telepon/WhatsApp, email, dan pembuatan kata sandi.
+- Pilihan Kategori Profil Pengguna: Registrasi sebagai Pemohon Perorangan, Lembaga/Yayasan, Kelompok Masyarakat, Koperasi, atau Pelaku Usaha Mikro-Kecil (UMK).
+- Verifikasi Identitas (e-KYC): Unggah foto KTP/NIK, NPWP, izin usaha (NIB/SKU), serta verifikasi foto wajah untuk mencegah identitas ganda (single identity registry).
+
+2. PENGAJUAN PROPOSAL BANTUAN TJSL / PPM DIGITAL
+- Pengajuan Proposal Online: Pengisian formulir permohonan bantuan secara mandiri tanpa harus datang ke kantor perusahaan atau mengirimkan surat pos.
+- Pemilihan Klasifikasi Bantuan: Pilihan bidang bantuan sesuai kebutuhan (Pendidikan, Kesehatan, Lingkungan, Sarana Ibadah/Umum, Sosial Kemasyarakatan, atau Bantuan Darurat Bencana).
+- Unggah Berkas Persyaratan: Fitur unggah dokumen proposal kegiatan, rincian Rencana Anggaran Biaya (RAB), struktur panitia/lembaga, dan surat rekomendasi instansi terkait.
+- Penandaan Lokasi Permohonan: Penentuan titik koordinat lokasi sasaran penerima manfaat menggunakan peta interaktif di ponsel.
+
+3. PENGAJUAN PINJAMAN MODAL KERJA PUMK (UMK & KOPERASI)
+- Pengajuan Pembiayaan Usaha Mandiri: Formulir pengajuan pinjaman kemitraan PUMK bagi pelaku usaha mikro dan kecil.
+- Pengisian Profil Usaha: Pendataan jenis komoditas/usaha, omzet penjualan bulanan, aset usaha, jumlah tenaga kerja, dan kebutuhan modal yang diajukan.
+- Unggah Legalitas Usaha: Fitur foto dan unggah dokumen NIB, izin edar, surat keterangan usaha, dan dokumen jaminan/agunan (bila disyaratkan).
+- Akad Kredit Digital: Fasilitas penandatanganan akad perjanjian pinjaman secara elektronik (e-sign) melalui smartphone setelah permohonan disetujui komite pendanaan.
+
+4. PELACAKAN STATUS PERMOHONAN REAL-TIME (TRACK & TRACE)
+- Pelacakan Status Berkas Transparan: Fitur pemantauan tahapan pemrosesan berkas secara terbuka layaknya resi pengiriman logistik:
+  [Proposal Terkirim] -> [Verifikasi Berkas] -> [Survei Lapangan] -> [Rapat Komite Seleksi] -> [Disetujui/Ditolak] -> [Proses Pencairan Dana].
+- Notifikasi Perkembangan Berkas: Pengiriman pesan notifikasi otomatis saat berkas berpindah tahap, membutuhkan perbaikan dokumen, atau telah diterbitkan surat keputusan resminya.
+- Transparansi Alasan Penolakan: Informasi jelas dan resmi jika usulan bantuan belum memenuhi syarat atau masuk kategori cadangan/revisi.
+
+5. LAYANAN KARTU PINJAMAN & PEMBAYARAN ANGSURAN PUMK
+- Buku Pinjaman Digital: Tampilan ringkasan sisa saldo pokok pinjaman, riwayat angsuran yang telah dibayarkan, dan sisa tenor bulan berjalan.
+- Jadwal & Tagihan Angsuran: Rincian jadwal tanggal jatuh tempo tagihan angsuran bulanan.
+- Pembayaran via Virtual Account (VA): Pembuatan nomor Virtual Account otomatis yang dapat dibayar melalui mobile banking, ATM, maupun kanal pembayaran lainnya.
+- Tanda Terima Pembayaran Sah: Notifikasi instan dan bukti bayar elektronik resmi setelah pembayaran angsuran berhasil terverifikasi otomatis oleh sistem.
+- Pengingat Tagihan Otomatis: Pengiriman alert pengingat menjelang tanggal jatuh tempo untuk menjaga kolektibilitas tetap lancar.
+
+6. PELAPORAN PROGRES & PENGUNGGAHAN LPJ (MITRA & KELOMPOK BINAAN)
+- Pengunggahan Laporan Pertanggungjawaban (LPJ): Fasilitas bagi kelompok binaan atau mitra pelaksana untuk mengunggah dokumen pertanggungjawaban kegiatan secara berkala.
+- Bukti Pengeluaran Digital: Pemotretan dan pengunggahan bukti kuitansi belanja barang, nota pengeluaran, dan bukti transfer operasional.
+- Dokumentasi Hasil Kegiatan: Pengunggahan foto dan video hasil pelaksanaan program di lapangan sebagai bukti pelaksanaan pekerjaan.
+
+7. AKSES PEMBINAAN, PELATIHAN, & ETALASE PASAR UMK
+- Kalender Pelatihan & Mentoring: Informasi agenda pelatihan kewirausahaan, pembukuan keuangan, dan manajemen usaha yang diadakan oleh CSR.
+- Pendaftaran Program Pembinaan: Pendaftaran mengikuti bimbingan teknis, pameran UMKM, atau kurasi sertifikasi produk (halal, PIRT, BPOM).
+- Etalase Produk Binaan: Fasilitas bagi mitra binaan untuk menampilkan profil produk usahanya ke dalam katalog digital CSR perusahaan.
+
+8. KANAL PENGADUAN MASYARAKAT (GRIEVANCE) & SURVEI KEPUASAN
+- Layanan Aspirasi dan Pengaduan: Kanal resmi bagi masyarakat dan penerima manfaat untuk menyampaikan keluhan, laporan ketidaksesuaian, atau masukan terkait pelaksanaan program CSR.
+- Pelacakan Tiket Aduan: Pemantauan tindak lanjut tanggapan dan penyelesaian atas aduan yang telah dilaporkan.
+- Pengisian Kuesioner Kepuasan: Partisipasi pengisian survei kepuasan penerima bantuan secara online dari aplikasi mobile.

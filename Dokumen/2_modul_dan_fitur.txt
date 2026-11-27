@@ -1,0 +1,141 @@
+ANALISIS DOKUMEN: KAK-TIMAH.PDF
+PERTANYAAN 2: MODUL DAN FITURNYA APA SAJA?
+
+Berdasarkan KAK, sistem ini mencakup 5 modul inti dan 1 kelompok modul pendukung komprehensif:
+
+================================================================================
+1. MODUL 1: PERENCANAAN PROGRAM DAN KEGIATAN PPM/TJSL
+================================================================================
+Pengguna Utama: Bidang Perencanaan CSR
+
+Fitur-fitur:
+- P-01: Penyusunan Roadmap / Rencana Jangka Panjang TJSL yang selaras dengan RJPP perusahaan, prioritas pemangku kepentingan, dan tagging otomatis kontribusi SDGs/TPB.
+- P-02: Social Mapping dan Needs Assessment: Pemetaan kebutuhan wilayah (ring-1 dan sekitar wilayah operasi), impor data publik (BPS/DTSEN/Podes), analisis sosial-ekonomi-lingkungan, dan stakeholder mapping (pengaruh vs kepentingan).
+- P-03: Analisis materialitas dan penentuan pilar program (ekonomi, pendidikan, kesehatan, lingkungan, infrastruktur sosial).
+- P-04: Desain program berbasis Theory of Change / LogFrame: perumusan input, aktivitas, output, outcome, impact, asumsi, dan risiko.
+- P-05: Penyusunan RKAP TJSL: penyusunan kegiatan dan anggaran per pilar/wilayah/bulan, cascading per bidang, kontrol revisi, dan versioning.
+- P-06: Library program dan template: katalog program rujukan, standar unit cost/biaya, dan benchmark keberhasilan program.
+- P-07: Prioritisasi program berbasis skoring (dampak, urgensi, kelayakan, sinergi, analisis biaya-manfaat) serta fitur simulasi "what-if" alokasi anggaran.
+- P-08: Penetapan target dan KPI program (mengalir langsung ke modul implementasi dan monev).
+- P-09: Workflow persetujuan berjenjang (Kabid -> Kepala Divisi -> Direksi/Komite) dilengkapi tanda tangan digital (e-sign) dan jejak riwayat revisi.
+- P-10: Perencanaan risiko dan perlindungan (safeguard) per program (aspek sosial, lingkungan, reputasi, dan benturan kepentingan).
+- P-11: Manajemen sinergi dan kolaborasi (antar anak perusahaan, mitra, pemda, BUMN/CSR lain) serta pengelolaan pipeline program.
+
+================================================================================
+2. MODUL 2: IMPLEMENTASI PPM/TJSL
+================================================================================
+Pengguna Utama: Bidang Implementasi CSR
+Terbagi ke dalam 4 sub-modul operasional:
+
+Sub-Modul 2a: Program PPM (Pemberdayaan Masyarakat)
+- I-01: Pembentukan program turunan dari RKAP (jadwal Gantt Chart, PIC, rincian kegiatan, alokasi anggaran, dan target output).
+- I-02: Registrasi dan verifikasi mitra pelaksana/penerima manfaat (LSM, universitas, konsultan, kelompok masyarakat) beserta pemeriksaan rekam jejak dan blacklist check.
+- I-03: Assessment calon penerima manfaat: kuesioner dinamis, survei lapangan via aplikasi mobile, wawancara, dan penetapan baseline awal.
+- I-04: Penilaian skor kapasitas dan kelayakan penerima (kelembagaan, SDM, aset/usaha, potensi pasar, risiko sosial).
+- I-05: Administrasi pengadaan/MoU/PKS: penerbitan SPK, e-sign kontrak, dan termin pembayaran berbasis capaian milestone/output.
+- I-06: Manajemen pelaksanaan lapangan: task list penugasan, bukti kegiatan berstempel waktu dan geotagging koordinat, absensi digital berbasis QR code, serta catatan lapangan (offline-first).
+- I-07: Pendampingan dan pembinaan kelompok: modul kurikulum, jadwal, presensi, dan capacity scoring perkembangan kapasitas binaan.
+- I-08: Monitoring realisasi anggaran vs rencana berbasis integrasi SAP FICO; pencairan dana berbasis verifikasi output.
+- I-09: Manajemen perubahan (change request log) serta pencatatan isu dan risiko (issue/risk log).
+- I-10: Serah terima pekerjaan, Laporan Pertanggungjawaban (LPJ), penutupan program, exit strategy, dan perencanaan keberlanjutan pasca-program.
+
+Sub-Modul 2b: Bantuan TJSL (Charity / Bantuan Sosial Kemasyarakatan)
+- C-01: Penerimaan usulan bantuan melalui portal permohonan web/mobile, sistem eksisting (TEO), registrasi surat masuk berbasis OCR, serta jalur darurat bencana (fast-track).
+- C-02: Verifikasi data otomatis: validasi identitas (NIK/NPWP/AHU), pengecekan riwayat bantuan terdahulu (deduplikasi), kesesuaian wilayah, dan blacklist.
+- C-03: Klasifikasi jenis bantuan (bencana, keagamaan, kesehatan, pendidikan, sarana umum) dan kontrol sub-limit pagu anggaran per kategori.
+- C-04 & C-05: Assessment dan penilaian kelayakan penerima secara fleksibel jika diperlukan.
+- C-06: Skoring ringkas kelayakan proposal serta penerapan matriks kewenangan persetujuan berjenjang berdasarkan nominal bantuan.
+- C-07: Verifikasi lapangan (survei singkat, geotag foto) dan mekanisme pencairan langsung (direct to beneficiary / direct to vendor).
+- C-08: Pencatatan bukti penyaluran bantuan (BAST, kuitansi digital, dokumentasi foto serah terima) dan publikasi transparansi.
+- C-09: Deteksi anomali dan fraud: flagging pemohon berulang, nomor rekening/alamat sama antar-pemohon, atau nominal tidak wajar.
+- C-10: Kontrol kepatuhan: kewajiban pelaporan penerima, pemeriksaan pajak, serta deklarasi bebas benturan kepentingan (conflict of interest).
+
+Sub-Modul 2c: Program Flagship (Program Unggulan Multi-Tahun)
+- F-01: Definisi program strategis flagship: peta Theory of Change, sasaran wilayah, timeline multi-tahun, pagu, dan target penerima manfaat.
+- F-02 & F-03: Assessment mendalam calon penerima manfaat serta skoring kapasitas kelembagaan.
+- F-04: Penetapan KPI, target capaian, dan baseline berbasis modul indicator library.
+- F-05: Kalkulasi benefit impact: penghitungan kenaikan pendapatan, serapan tenaga kerja, efisiensi biaya, perbaikan lingkungan, kalkulator SROI otomatis, dan analisis atribusi.
+- F-06: Penilaian kinerja periodik (output, outcome, tata kelola, kepuasan mitra) dengan sistem pembobotan yang dapat dikonfigurasi.
+- F-07: Monitoring implementasi: pelacakan milestone, RAG status (Red-Amber-Green), dan sistem peringatan dini (early warning) deviasi target.
+- F-08: Skema graduasi dan tiering penerima manfaat (Pemula -> Berkembang -> Mandiri -> Naik Kelas) beserta rekomendasi intervensi lanjutan.
+- F-09: Kurasi cerita keberhasilan (success story & storytelling) untuk kebutuhan publikasi dan komunikasi korporasi.
+- F-10: Pengelolaan kolaborasi multi-pihak (Pemda, universitas, mitra korporasi) dan pelacakan jejak kontribusi bersama.
+
+Sub-Modul 2d: Fitur Penilaian / Scoring Proposal (Pra-Tindak Lanjut)
+- S-01: Intake proposal dari portal pemohon atau surat masuk, checklist kelengkapan berkas otomatis.
+- S-02: Screening administratif sistematis berbasis aturan gugur/lanjut (aspek legalitas, wilayah domisili, batas anggaran, riwayat bantuan).
+- S-03: Skoring kuantitatif rubrik terbobot, multi-reviewer penilai, kalibrasi skor rata-rata/median, dan pencatatan justifikasi penilaian.
+- S-04: Rekomendasi otomatis keputusan seleksi (Prioritas, Layak Bersyarat, Ditolak) serta perangkingan sesuai kuota anggaran per periode.
+- S-05: Deteksi kecerdasan buatan (NLP) untuk mencegah duplikasi proposal serupa serta deteksi anomali pada Rencana Anggaran Biaya (RAB).
+- S-06: Notulensi dan tata kelola forum rapat komite seleksi (agenda rapat, resume pertimbangan, rekaman voting/keputusan).
+- S-07: Notifikasi hasil seleksi kepada pemohon, kanal sanggahan/appeal terbatas, dan pengarsipan keputusan resmi.
+- S-08: Fleksibilitas konfigurasi bobot kriteria dan rubrik penilaian tanpa coding per tahun dan kategori program.
+- S-09: Audit trail menyeluruh mencakup log identitas penilai, waktu penilaian, dan versi rubrik yang diterapkan.
+
+================================================================================
+3. MODUL 3: PENGEMBANGAN KOPERASI DAN PUMK (USAHA MIKRO DAN KECIL)
+================================================================================
+Pengguna Utama: Bidang Koperasi dan PUMK
+
+Fitur-fitur:
+- K-01: Master database dan registri koperasi & mitra binaan: legalitas usaha (AHU/NIB), data pengurus, aset, omzet, kategori usaha via integrasi MCOS/PDC.
+- K-02: Onboarding dan pengajuan pinjaman modal kerja secara online, ekstraksi berkas otomatis (OCR), verifikasi identitas dan keabsahan izin.
+- K-03: Analisis kelayakan pembiayaan prinsip 5C (Character, Capacity, Capital, Condition, Collateral/alternatif) dipadukan dengan credit scoring otomatis untuk penetapan batas plafon dan tenor pinjaman.
+- K-04: Survei lapangan berbasis aplikasi mobile (checklist fisik usaha, foto geotag lokasi tempat usaha, dan verifikasi RAB usaha).
+- K-05: Alur persetujuan komite pendanaan, penandatanganan akad perjanjian pinjaman via e-sign, pencairan dana langsung ke rekening mitra binaan melalui integrasi perbankan/ERP, serta pencatatan jaminan fidusia.
+- K-06: Pengelolaan siklus pinjaman: kartu jadwal angsuran, penagihan otomatis, nomor Virtual Account pembayaran, rekonsiliasi otomatis, pengelolaan denda, restrukturisasi kredit, hingga prosedur write-off (penghapusbukuan).
+- K-07: Monitoring kolektibilitas dan early warning pinjaman: pemantauan DPD (Days Past Due), klasifikasi kolektibilitas (Lancar s.d. Macet), daftar pantau khusus (watchlist), blast pengingat otomatis (WhatsApp, SMS, Email), workflow penagihan, dan penugasan kunjungan penagihan lapangan.
+- K-08: Pembinaan dan business coaching: modul pelatihan kewirausahaan, pendampingan pembukuan/literasi keuangan, serta pembukaan akses pasar (katalog produk binaan, e-katalog UMK, fasilitasi pameran, dan temu bisnis/matchmaking dengan off-taker).
+- K-09: Skema kenaikan kelas (tiering & graduation): evaluasi repeat order pembiayaan bagi mitra lancar, serta rujukan mitra binaan mandiri ke pembiayaan komersial/KUR perbankan (bankable).
+- K-10: Program pengembangan koperasi: penilaian tingkat kesehatan koperasi (aspek kelembagaan, kepatuhan RAT, permodalan, SHU), digitalisasi pembukuan koperasi, dan program penguatan usaha.
+- K-11: Laporan analitik portofolio PUMK: rekap baki debet saldo pinjaman, rasio NPL, roll rate, analisis vintage penyaluran, sebaran wilayah/sektor, serta dampak sosial-ekonomi (penciptaan lapangan kerja baru, kenaikan omzet, dan kenaikan aset mitra).
+- K-12: Kepatuhan regulasi pendanaan: kepatuhan APU-PPT, filter pencegahan transaksi internal berkepentingan (insider/conflict of interest), serta kepatuhan perlindungan data pribadi (UU PDP).
+
+================================================================================
+4. MODUL 4: MONITORING DAN EVALUASI (MONEV)
+================================================================================
+Pengguna Utama: Seluruh Bidang CSR, Tim Monev, Kepala Divisi, Manajemen
+
+Fitur-fitur:
+- M-01: Kerangka M&E terpadu dan Indicator Library: standardisasi indikator kinerja, formula perhitungan, sumber data verifikasi, frekuensi pemantauan, PIC, baseline, dan target capaian.
+- M-02: Monitoring progres komprehensif: pemantauan realisasi fisik, realisasi serapan anggaran, capaian output, jadwal kegiatan, indikator deviasi RAG (Red-Amber-Green), analisis varians, serta action tracker tindak lanjut temuan.
+- M-03: Monev lapangan berbasis mobile: pembuatan jadwal kunjungan (visit scheduling), checklist digital pemeriksaan di tempat, verifikasi foto berstempel geotag, tanda tangan digital pengawas & mitra, serta pencatatan rekomendasi perbaikan.
+- M-04: Survei penerima manfaat: pelaksanaan survei berkala (baseline, midline, endline, indeks kepuasan penerima) via mobile app, blast tautan WhatsApp, atau scan QR code yang diolah otomatis oleh sistem.
+- M-05: Evaluasi dampak mendalam (Impact Assessment): mengadopsi standar evaluasi OECD-DAC (relevansi, koherensi, efektivitas, efisiensi, dampak, keberlanjutan), penghitungan SROI (Social Return on Investment), serta evaluasi komparasi kelompok pembanding (counterfactual).
+- M-06: Kanal penanganan aduan dan masukan (grievance & feedback mechanism) dari masyarakat dan mitra dengan SLA penanganan yang terpantau.
+- M-07: Sistem peringatan dini (early warning) dan eskalasi otomatis ketika terjadi deviasi pada serapan anggaran, keterlambatan jadwal, atau penurunan kolektibilitas kredit.
+- M-08: Closed-Loop Learning: hasil evaluasi, rekomendasi perbaikan, dan lessons learned terintegrasi langsung ke perencanaan tahun anggaran berikutnya pada Modul 1.
+- M-09: Otomasi laporan periodik: generasi laporan otomatis multi-format (bulanan, triwulanan, tahunan; laporan internal, laporan ke kementerian/badan pengawas, serta pelaporan keberlanjutan Sustainability Report standar GRI).
+- M-10: Dukungan audit internal dan eksternal: rekaman jejak audit (audit trail) tak terhapus dan kemudahan ekspor bundel dokumen bukti pendukung (evidence pack) bagi pemeriksa SPI maupun auditor eksternal.
+
+================================================================================
+5. MODUL 5: DASHBOARD DAN ANALITIK
+================================================================================
+Pengguna Utama: Seluruh Bidang, Kepala Divisi, Jajaran Direksi, Publik (opsional)
+
+Tingkatan Dashboard:
+- Level Eksekutif (Direksi, Komite, Kadiv CSR): Menampilkan realisasi anggaran per pilar TJSL dan SDGs, total penerima manfaat, peta sebaran GIS wilayah operasi, pencapaian KPI strategis perusahaan, skor SROI keseluruhan, mitigasi risiko utama (top risks), serta kinerja portofolio PUMK (saldo baki debet dan rasio NPL).
+- Level Manajerial (Kepala Bidang): Menampilkan status RAG per program, pipeline proposal masuk, komparasi realisasi vs RKAP, capaian outcome/dampak per wilayah, evaluasi kinerja mitra kerja, dan alert deviasi operasional.
+- Level Operasional (Kepala Bagian / Staf PIC): Menampilkan penugasan harian (my tasks), monitoring batas waktu pengerjaan (deadline/SLA), antrean dokumen yang membutuhkan persetujuan/verifikasi, dan agenda kunjungan lapangan.
+- Level Publik / Stakeholder (Opsional/Eksternal): Visualisasi ringkasan capaian program, persebaran bantuan sosial, dan galeri cerita perubahan dampak secara teragregasi dan aman tanpa membuka data rahasia individu.
+
+Fitur Fungsional Dashboard:
+- Kemampuan drill-down dari level Divisi -> Bidang -> Program -> Rincian Kegiatan -> hingga data Penerima Manfaat individual.
+- Filter data dinamis multi-kriteria (tahun anggaran, wilayah operasional/kabupaten, pilar TJSL, tujuan SDGs).
+- Peta sebaran spasial interaktif (GIS mapping).
+- Scorecard KPI, analisis tren perkembangan, dan proyeksi/forecasting serapan anggaran.
+- Fitur ekspor laporan visual ke format PDF dan data mentah Excel.
+- Pengaturan alert ambang batas dan pengiriman laporan otomatis terjadwal (scheduled reporting).
+
+================================================================================
+6. MODUL PENDUKUNG (USULAN TAMBAHAN KOMPREHENSIF)
+================================================================================
+1. Single Beneficiary Registry (SBR) & Master Data: Master identitas terpusat (NIK/NPWP/NIB), tracking riwayat penerimaan bantuan lintas program/tahun, deduplikasi otomatis (fuzzy matching) untuk mencegah bantuan ganda, dan status graduasi penerima.
+2. Portal Pemohon / Mitra (Web & Mobile): Fasilitas registrasi akun mandiri bagi masyarakat/lembaga, submisi proposal digital, fitur pelacakan status permohonan secara real-time (track & trace layaknya resi ekspedisi), unggah LPJ online, serta kanal komunikasi terpusat.
+3. Manajemen Mitra Pelaksana (Vendor/Partner Management): Modul due diligence mitra pelaksana, penilaian KPI kinerja rekanan, dan daftar hitam (blacklist management).
+4. Manajemen Anggaran & Pencairan: Kontrol batas pagu anggaran vs realisasi riil, budget commitment, integrasi data dengan modul SAP FICO, dan rekonsiliasi keuangan.
+5. Manajemen Dokumen & Persetujuan: Template dokumen standar (surat perjanjian, formulir survei), tanda tangan digital tersertifikasi (e-sign), pengelolaan versi dokumen (versioning control), dan sistem retensi arsip digital.
+6. Manajemen Risiko & Kepatuhan: Penyusunan risk register di level program, deklarasi pencegahan benturan kepentingan (conflict of interest), pencatatan gratifikasi, dan pendeteksian red flags indikasi fraud.
+7. Manajemen Aset Hasil Program: Pencatatan serah terima fisik aset kepada masyarakat binaan (dokumen BAST), pemantauan status kondisi fisik aset, dan rencana pemeliharaan berkala.
+8. Komunikasi & Kolaborasi: Sistem notifikasi multi-kanal (Email, WhatsApp, notifikasi aplikasi), kolom komentar/chat diskusi internal per dokumen program, serta etalase kurasi cerita sukses program.
+9. Administrasi Sistem & Keamanan: Manajemen hak akses berbasis peran (RBAC), integrasi login tunggal (SSO), pencatatan log aktivitas yang tidak dapat diubah (tamper-proof audit trail), serta konfigurasi dinamis aturan rubrik/bobot/matriks kewenangan tanpa pengkodean ulang program (no-code configuration).

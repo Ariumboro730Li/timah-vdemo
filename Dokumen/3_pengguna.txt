@@ -1,0 +1,65 @@
+ANALISIS DOKUMEN: KAK-TIMAH.PDF
+PERTANYAAN 3: SIAPA PENGGUNANYA?
+
+Pengguna aplikasi terintegrasi ini terbagi menjadi pengguna internal perusahaan (antar level jabatan dan fungsi) serta pengguna eksternal (masyarakat dan mitra), sebagaimana dirinci pada Bab Ruang Lingkup (Bagian 4.1), Tingkatan Dashboard (Bagian 7.5), dan Matriks RACI (Bagian 10):
+
+================================================================================
+1. PENGGUNA INTERNAL DIVISI CSR (PENGELOLA UTAMA)
+================================================================================
+a. Kepala Divisi CSR (Kadiv CSR)
+   - Peran dalam sistem: Pemegang tanggung jawab akhir (Accountable) atas seluruh tata kelola program CSR/TJSL/PUMK.
+   - Aktivitas: Menyetujui usulan RKAP dan alokasi anggaran tahunan, menyetujui program kerja, menyetujui bantuan dan proposal sesuai batas matriks kewenangan, memantau risiko divisi, serta memonitor pencapaian KPI melalui Dashboard Eksekutif.
+
+b. Bidang Perencanaan CSR dan Pemberdayaan Masyarakat (BP)
+   - Kepala Bidang Perencanaan: Bertanggung jawab merumuskan arah kebijakan jangka panjang (Roadmap), mengompilasi RKAP divisi, menetapkan KPI program, mengoordinasikan analisis dampak (SROI), dan memvalidasi laporan korporasi.
+   - Staf Perencanaan: Mengelola data pemetaan sosial (social mapping) dan data kebutuhan wilayah, menginput draf RKA, mengelola template indikator kinerja (Indicator Library), serta menyusun laporan periodik konsolidasian (bulanan, triwulanan, tahunan, Sustainability Report).
+
+c. Bidang Implementasi CSR dan Pemberdayaan Masyarakat (BI)
+   - Kepala Bidang Implementasi: Mengesahkan pembentukan tim proyek lapangan, memvalidasi hasil verifikasi proposal, memimpin rapat penelaahan bantuan, menyetujui SPK/PKS teknis, serta mengawasi eksekusi program pemberdayaan dan bantuan tanggap darurat/charity.
+   - Staf Implementasi & Tim Lapangan: Memeriksa dan meregistrasi proposal bantuan masuk, melakukan verifikasi lapangan (survei, foto geotag), mendampingi kelompok masyarakat/mitra pelaksana, memvalidasi bukti pengeluaran dan laporan pertanggungjawaban (LPJ), serta menginput perkembangan fisik kegiatan secara mobile.
+
+d. Bidang Pengembangan Koperasi dan PUMK (BK)
+   - Kepala Bidang Koperasi dan PUMK: Mengawasi operasional penyaluran dana pinjaman kemitraan, memantau tingkat kesehatan portofolio pinjaman dan rasio kredit macet (NPL), mengarahkan program pembinaan/pelatihan, serta menyetujui usulan restrukturisasi pinjaman.
+   - Analis Pendanaan & Staf PUMK: Melakukan uji kelayakan calon debitur/mitra binaan berbasis prinsip 5C dan credit scoring, survei verifikasi ke tempat usaha mitra binaan, mengelola penagihan dan jadwal angsuran, menangani peringatan dini pinjaman tertunggak, serta mendampingi koperasi dan UMK agar naik kelas (graduation).
+
+e. Tim Monitoring dan Evaluasi (Monev)
+   - Melakukan penjadwalan dan kunjungan audit fisik ke lapangan, menyebarkan survei kepuasan penerima manfaat, menganalisis deviasi realisasi fisik dan serapan anggaran (status RAG), menyusun tindak lanjut temuan (action tracker), dan mengkaji laporan evaluasi dampak sosial-ekonomi (OECD-DAC / SROI).
+
+f. Komite Seleksi Proposal dan Komite Pendanaan PUMK
+   - Tim gabungan pejabat pengambil keputusan yang menggelar forum rapat seleksi berkala dalam aplikasi untuk memberikan penilaian formal, voting persetujuan, dan penetapan kuota pembiayaan atau penerima bantuan program unggulan.
+
+================================================================================
+2. PENGGUNA INTERNAL LINTAS DIVISI PERUSAHAAN (CROSS-FUNCTIONAL)
+================================================================================
+a. Direksi Perusahaan (Dewan Direksi)
+   - Pengguna level tertinggi yang mengakses Dashboard Eksekutif untuk memantau performa makro program TJSL perusahaan, realisasi penyerapan anggaran korporat, kontribusi terhadap SDGs/TPB, peta spasial sebaran manfaat program, serta memberikan persetujuan akhir untuk program bernilai besar di atas batas kewenangan Kepala Divisi.
+
+b. Divisi Keuangan dan Akuntansi (KEU)
+   - Memproses pencairan anggaran program atau pencairan dana pinjaman mitra binaan ke perbankan, melakukan pemadanan data komitmen anggaran melalui integrasi SAP/FICO, mengelola penerimaan pembayaran angsuran melalui virtual account bank, dan melakukan rekonsiliasi keuangan.
+
+c. Divisi Legal / Hukum (LGL)
+   - Memeriksa aspek kepatuhan hukum, melakukan telaah dan validasi draf kontrak kerja sama (PKS/SPK), perjanjian pinjaman kemitraan, serta administrasi pengikatan jaminan fidusia secara elektronik.
+
+d. Satuan Pengawas Intern (SPI) dan Manajemen Risiko (MR)
+   - Melakukan pengawasan independen, memeriksa rekam jejak aktivitas sistem (audit trail log) untuk mencegah praktik kecurangan (fraud), menelaah kepatuhan terhadap regulasi (ISO 37001 anti-penyuapan dan ISO 31000 manajemen risiko), serta memantau deklarasi benturan kepentingan (conflict of interest).
+
+e. Divisi Teknologi Informasi (TI / ICT) & System Administrator
+   - Mengelola operasional infrastruktur aplikasi, mengatur hak akses pengguna berbasis peran (RBAC), memelihara keamanan data dan privasi (kepatuhan UU PDP), mengelola integrasi antar sistem (API), serta memelihara konfigurasi master data sistem.
+
+================================================================================
+3. PENGGUNA EKSTERNAL
+================================================================================
+a. Pemohon Bantuan / Masyarakat Umum
+   - Warga masyarakat, kelompok warga, lembaga sosial, yayasan, atau institusi yang mengajukan proposal permohonan bantuan secara online melalui portal web/mobile, mengunggah persyaratan berkas legalitas, serta memantau status persetujuan pengajuannya secara mandiri (track and trace).
+
+b. Calon Mitra dan Mitra Binaan PUMK (Pelaku UMK & Koperasi)
+   - Pelaku usaha mikro dan kecil serta pengurus koperasi yang mengajukan pembiayaan modal kerja, mengunggah berkas usaha, menandatangani akad digital, menerima jadwal tagihan angsuran, melakukan konfirmasi pembayaran, serta mengikuti pelatihan dan pembinaan bisnis online.
+
+c. Mitra Pelaksana Program (Implementing Partners)
+   - Lembaga Swadaya Masyarakat (LSM), perguruan tinggi/akademisi, lembaga riset, yayasan mitra, atau konsultan pelaksana yang ditunjuk menjalankan program pemberdayaan masyarakat; bertugas mengisi laporan kemajuan berkala, menginput absensi kehadiran peserta pelatihan binaan, dan mengunggah dokumen pertanggungjawaban (LPJ).
+
+d. Penerima Manfaat Akhir (Beneficiaries)
+   - Masyarakat penerima manfaat program yang mengisi survei kepuasan atau asesmen dampak melalui pemindaian kode QR, formulir digital mobile, atau tautan WhatsApp, serta menggunakan kanal pengaduan masyarakat (grievance mechanism) untuk memberikan masukan.
+
+e. Auditor Eksternal, Regulator, dan Lembaga Asurans
+   - Pihak pemeriksa eksternal (misalnya auditor BPK/KAP, kementerian BUMN, verifikator sertifikasi ISO, atau asurans laporan keberlanjutan pihak ketiga) yang diberikan akses terbatas untuk memeriksa keabsahan bukti dukung digital, kesesuaian prosedur, dan kepatuhan penyaluran dana sosial.

@@ -1,0 +1,20 @@
+ANALISIS DOKUMEN: KAK-TIMAH.PDF
+PERTANYAAN 1: APLIKASI APA INI?
+
+Aplikasi yang dijelaskan dalam dokumen Kerangka Acuan Kerja (KAK) ini adalah:
+"Aplikasi Terintegrasi CSR / TJSL / PPM / PUMK"
+
+1. Definisi dan Hakikat Aplikasi
+Aplikasi ini merupakan platform digital enterprise terpadu (berbasis web dan mobile) yang dirancang untuk mengelola seluruh siklus program Tanggung Jawab Sosial dan Lingkungan (TJSL), Program Pemberdayaan Masyarakat (PPM), serta Program Pendanaan Usaha Mikro dan Kecil (PUMK) secara terintegrasi dari hulu ke hilir (end-to-end).
+
+2. Karakteristik Utama Aplikasi
+- Transformasi Digital (Bukan Sekadar Digitize):
+  Aplikasi ini tidak hanya memindahkan formulir fisik ke format elektronik, melainkan mengubah cara kerja operasional, proses seleksi, pengambilan keputusan alokasi anggaran, sistem evaluasi, hingga pengukuran dampak sosial-ekonomi.
+- Single Source of Truth:
+  Menyatukan data RKA, pagu anggaran, program kerja, mitra binaan, proposal pemohon, dan data penerima manfaat ke dalam satu basis data terpusat untuk menghilangkan data silo yang sebelumnya tercecer di spreadsheet, email, dan dokumen manual.
+- Data-Driven & Outcome-Centric:
+  Perencanaan program berbasis data kebutuhan wilayah (social mapping dan needs assessment di wilayah operasi/ring tambang), sedangkan evaluasi berorientasi pada capaian dampak nyata (Theory of Change, LogFrame, SROI/Social Return on Investment, dan kontribusi terhadap SDGs/TPB).
+- Integrasi Ekosistem Sistem:
+  Terhubung secara otomatis dengan modul keuangan ERP (SAP FICO), sistem perbankan (host-to-host untuk pencairan dan virtual account), verifikasi identitas (Dukcapil/e-KYC), perizinan berusaha (OSS/NIB/AHU), serta sistem internal perusahaan (SSO dan portal surat menyurat).
+- Operasional Lapangan Mobile-First:
+  Mendukung aktivitas survei, verifikasi lapangan, absensi kegiatan, dan pemantauan mitra secara offline-first dengan validasi titik koordinat (geotag) serta stempel waktu (timestamp).

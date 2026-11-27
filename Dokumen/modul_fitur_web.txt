@@ -1,0 +1,122 @@
+MODUL DAN FITUR APLIKASI WEB
+Aplikasi Terintegrasi CSR / TJSL / PPM / PUMK
+(Berdasarkan Dokumen KAK CSR)
+
+Platform Web merupakan pusat kendali operasional, backoffice, pemrosesan transaksi, integrasi enterprise, dan cockpit pengambil keputusan strategis bagi manajemen dan seluruh divisi terkait.
+
+================================================================================
+1. MODUL PERENCANAAN PROGRAM DAN KEGIATAN PPM/TJSL (WEB)
+================================================================================
+Pengguna: Bidang Perencanaan CSR, Kepala Divisi, Direksi
+
+Fitur-fitur:
+- Roadmap TJSL & Keselarasan Strategis: Penyusunan rencana jangka panjang yang terhubung dengan RJPP perusahaan dan tagging otomatis kontribusi terhadap 17 Tujuan Pembangunan Berkelanjutan (SDGs/TPB).
+- Social Mapping & Needs Assessment: Peta kebutuhan wilayah ring operasi tambang, modul impor data publik (BPS, Podes, DTSEN), analisis kondisi sosial-ekonomi-lingkungan, dan matriks pemetaan stakeholder (pengaruh vs kepentingan).
+- Analisis Materialitas: Penentuan fokus isu strategis dan alokasi pilar program (ekonomi, pendidikan, kesehatan, lingkungan, infrastruktur).
+- Desain Program (Theory of Change & LogFrame): Perumusan rantai hasil program mulai dari input, aktivitas, output, outcome, impact, asumsi keberhasilan, hingga mitigasi risiko.
+- Penyusunan RKAP TJSL: Formulasi anggaran dan program kerja per pilar/wilayah/bulan, cascading anggaran per bidang kerja, pengelolaan revisi anggaran, dan kontrol versi dokumen (versioning).
+- Library Program & Template: Repositori katalog program rujukan, standar unit cost (biaya satuan baku), dan indikator benchmark keberhasilan.
+- Prioritisasi Program & Simulasi What-If: Algoritma pembobotan program (urgensi, dampak, kelayakan, biaya-manfaat) dan simulasi alokasi pagu anggaran.
+- Penetapan KPI & Target: Konfigurasi target kuantitatif program yang mengalir otomatis ke modul implementasi dan monev.
+- Workflow Review & Persetujuan Berjenjang: Alur persetujuan dokumen perencanaan (Kabid -> Kadiv -> Direksi/Komite) dilengkapi tanda tangan digital tersertifikasi (e-sign).
+- Perencanaan Risiko & Safeguard: Penyusunan risk register awal mencakup risiko sosial, lingkungan, hukum, reputasi, dan potensi benturan kepentingan.
+- Sinergi & Pipeline Program: Pengelolaan kerja sama antar anak perusahaan holding, pemerintah daerah, dan program CSR mitra eksternal.
+
+================================================================================
+2. MODUL SELEKSI & PENILAIAN PROPOSAL / PRA-TINDAK LANJUT (WEB)
+================================================================================
+Pengguna: Tim Seleksi, Reviewer Proposal, Komite Seleksi, Kepala Bidang, Kepala Divisi
+
+Fitur-fitur:
+- Intake & Registrasi Proposal: Pengelolaan proposal masuk dari portal pemohon atau konversi surat fisik via OCR, validasi kelengkapan berkas otomatis.
+- Screening Administratif Berbasis Aturan: Validasi gugur/lanjut otomatis terhadap legalitas pemohon, domisili wilayah operasi, kesesuaian bidang bantuan, batas plafon anggaran, dan riwayat bantuan sebelumnya.
+- Scoring Kuantitatif Rubrik Terbobot: Penilaian multi-penilai (multi-reviewer), kalibrasi skor rata-rata/median, dan pencatatan justifikasi penilaian.
+- Rekomendasi Seleksi & Pemeringkatan: Klasifikasi otomatis status kelayakan (Prioritas, Layak Bersyarat, Ditolak) serta perangkingan sesuai kuota anggaran per periode.
+- Otomasi Cerdas (AI / NLP): Pendeteksian kesamaan/duplikasi proposal masuk dengan proposal historis, serta deteksi anomali harga pada Rencana Anggaran Biaya (RAB).
+- Forum / Rapat Komite Seleksi: Notulensi agenda rapat seleksi online, risalah pertimbangan komite, dan pencatatan voting keputusan.
+- Notifikasi & Penerbitan Keputusan: Pengiriman status hasil seleksi, pengelolaan kanal sanggahan/appeal terbatas, dan pengarsipan surat persetujuan/penolakan resmi.
+- Konfigurasi Rubrik Tanpa Koding (No-Code): Pengaturan parameter kriteria penilaian, bobot persentase, dan ambang batas kelulusan per tahun anggaran.
+- Audit Trail Penilaian: Pencatatan rekam jejak digital lengkap (siapa menilai apa, kapan, skor per kriteria, dan versi rubrik yang dipakai).
+
+================================================================================
+3. MODUL IMPLEMENTASI PPM & BANTUAN TJSL (WEB BACKOFFICE)
+================================================================================
+Pengguna: Bidang Implementasi CSR, Tim Keuangan, Tim Legal
+
+Fitur-fitur:
+- Pembentukan Program Kerja: Penjabaran program dari RKAP ke rincian aktivitas, jadwal pelaksanaan (Gantt Chart), penetapan PIC, alokasi anggaran, dan target output fisik.
+- Registrasi & Due Diligence Mitra: Verifikasi legalitas mitra pelaksana (LSM, universitas, konsultan), penilaian rekam jejak, dan pemeriksaan blacklist.
+- Manajemen Kontrak / SPK / PKS: Penyusunan perjanjian kerja sama, e-sign kontrak digital, penentuan termin pembayaran berbasis capaian milestone/output.
+- Verifikasi Hasil Survei Lapangan: Telaah data asesmen dan bukti foto geotag yang dikirimkan petugas lapangan dari aplikasi mobile.
+- Verifikasi Realisasi Anggaran: Integrasi langsung dengan modul SAP FICO (pencatatan komitmen anggaran, verifikasi tagihan, dan rekonsiliasi pembayaran).
+- Administrasi Bantuan Charity: Registrasi tiket bantuan kemasyarakatan, kontrol sub-limit pagu anggaran per kategori (bencana, ibadah, kesehatan), proses persetujuan sesuai matriks batas kewenangan nominal, dan eksekusi pembayaran langsung ke rekening penerima/vendor.
+- Manajemen Perubahan & Isu: Pencatatan permohonan perubahan lingkup/anggaran (change request log) dan penanganan kendala proyek (issue/risk log).
+- Penutupan Program & LPJ: Verifikasi kelengkapan Laporan Pertanggungjawaban (LPJ), penandatanganan BAST digital, penutupan administratif program, dan perumusan exit strategy keberlanjutan.
+
+================================================================================
+4. MODUL PROGRAM FLAGSHIP / UNGGULAN (WEB)
+================================================================================
+Pengguna: Bidang Implementasi, Tim Monev, Manajemen
+
+Fitur-fitur:
+- Manajemen Program Jangka Panjang: Konfigurasi program flagship multi-tahun, penetapan Theory of Change terperinci, dan alokasi sumber daya.
+- Kalkulator SROI Otomatis: Perhitungan rasio dampak sosial terhadap investasi biaya (Social Return on Investment) dan analisis atribusi.
+- Scoring Kinerja Periodik: Evaluasi capaian output, outcome, tata kelola, dan tingkat kepuasan penerima dengan formula terbobot.
+- Pemantauan Status RAG (Red-Amber-Green): Monitoring deviasi target dan sistem early warning keterlambatan jadwal atau serapan anggaran.
+- Manajemen Graduasi Penerima: Evaluasi peningkatan kelas kelompok binaan (Pemula -> Berkembang -> Mandiri -> Naik Kelas).
+- Repositori Storytelling: Kurasi cerita dampak, dokumentasi foto/video perubahan sosial untuk materi komunikasi publik dan pelaporan keberlanjutan.
+
+================================================================================
+5. MODUL PENGEMBANGAN KOPERASI DAN PUMK (WEB BACKOFFICE)
+================================================================================
+Pengguna: Bidang Koperasi & PUMK, Analis Kredit, Komite Pendanaan, Tim Keuangan
+
+Fitur-fitur:
+- Master Registri Koperasi & Mitra Binaan: Database profil usaha, legalitas AHU/NIB, struktur pengurus, aset, omzet, dan kategori usaha via integrasi MCOS/PDC.
+- Engine Analisis Kelayakan 5C & Credit Scoring: Pemrosesan data kelayakan pembiayaan (Character, Capacity, Capital, Condition, Collateral) dipadukan algoritma scoring otomatis untuk penentuan rekomendasi plafon pinjaman dan tenor.
+- Komite Pendanaan: Alur persetujuan komite kredit secara online, penerbitan akad perjanjian pinjaman digital (e-sign), pencatatan jaminan/fidusia, dan integrasi instruksi pencairan dana ke sistem perbankan/ERP.
+- Loan Management Engine: Pembuatan kartu jadwal angsuran, penerbitan nomor Virtual Account (VA), rekonsiliasi otomatis mutasi pembayaran bank, kalkulasi denda/keringanan, simulasi restrukturisasi kredit bermasalah, dan proses write-off (penghapusbukuan).
+- Manajemen Kolektibilitas & NPL: Pemantauan DPD (Days Past Due) harian, klasifikasi kolektibilitas pinjaman (Lancar, Kurang Lancar, Diragukan, Macet), pemeliharaan daftar pantau khusus (watchlist), serta penjadwalan kunjungan penagihan lapangan.
+- Pembinaan & Program Naik Kelas: Manajemen kurikulum pelatihan usaha mikro, fasilitasi akses pasar (e-katalog UMK, kurasi pameran, business matchmaking dengan off-taker), dan evaluasi rujukan binaan mandiri ke fasilitas perbankan komersial (KUR/bankable).
+- Penguatan Kelembagaan Koperasi: Penilaian tingkat kesehatan koperasi (aspek kepatuhan RAT, permodalan, SHU), fasilitasi digitalisasi pembukuan koperasi, dan program penguatan usaha.
+- Analitik Portofolio Pembiayaan: Dashboard baki debet pinjaman, rasio NPL, roll rate, analisis vintage penyaluran, sebaran sektor/wilayah, serta metrik dampak ekonomi (jumlah lapangan kerja tercipta, pertumbuhan aset dan omzet mitra).
+
+================================================================================
+6. MODUL MONITORING DAN EVALUASI / MONEV (WEB)
+================================================================================
+Pengguna: Seluruh Bidang CSR, Tim Monev, SPI, Auditor Eksternal
+
+Fitur-fitur:
+- Master Indicator Library: Standardisasi kamus indikator kinerja program, formula kalkulasi, target, baseline, dan PIC penanggung jawab.
+- Tracking Kemajuan Terpadu: Monitoring komparasi rencana vs realisasi fisik, keuangan, output, indikator deviasi RAG, analisis varians, serta action tracker tindak lanjut.
+- Penjadwalan Monev Lapangan: Pembuatan agenda visit, penugasan surveyor/pengawas lapangan, dan telaah hasil inspeksi lapangan.
+- Olah Data Survei & Dampak: Agregasi dan analisis otomatis survei penerima manfaat (baseline, midline, endline, kepuasan), evaluasi dampak kerangka OECD-DAC, serta analisis counterfactual (kelompok pembanding).
+- Manajemen Keluhan (Grievance Mechanism): Monitoring tiket aduan/aspirasi masyarakat, eskalasi otomatis, pemantauan SLA penanganan keluhan.
+- Closed-Loop Learning: Penarikan rekomendasi evaluasi dan lessons learned untuk diintegrasikan kembali ke perencanaan tahun anggaran berikutnya pada Modul 1.
+- Otomasi Pelaporan Multi-Format: Pembuatan laporan berkala otomatis (bulanan, triwulanan, tahunan, laporan pengawas kementerian, serta Sustainability Report standar GRI) tanpa konsolidasi data manual.
+- Audit & Asurans Portal: Penyediaan log aktivitas sistem yang tidak dapat diubah (tamper-proof audit trail) dan ekspor bundel bukti verifikasi bagi auditor internal (SPI) maupun eksternal (BPK/KAP).
+
+================================================================================
+7. MODUL DASHBOARD DAN ANALITIK (WEB)
+================================================================================
+Pengguna: Direksi, Kepala Divisi, Kepala Bidang, Seluruh Staf
+
+Fitur-fitur:
+- Dashboard Eksekutif: Realisasi anggaran per pilar dan SDGs, total penerima manfaat, peta GIS sebaran program di wilayah operasi, capaian KPI strategis korporat, skor SROI keseluruhan, mitigasi top risks, dan ringkasan portofolio PUMK (saldo baki debet & NPL).
+- Dashboard Manajerial: Status RAG program kerja, pipeline usulan proposal, realisasi anggaran vs RKAP, capaian outcome/dampak per wilayah, evaluasi kinerja mitra kerja, dan alert deviasi operasional.
+- Dashboard Operasional: Daftar tugas harian (my tasks), monitoring tenggat waktu/SLA, antrean dokumen persetujuan, dan jadwal agenda kerja.
+- Fitur Analisis Tingkat Lanjut: Kemampuan drill-down berjenjang (Divisi -> Bidang -> Program -> Kegiatan -> Penerima), multi-filter data (tahun, wilayah, pilar, SDGs), peta spasial interaktif (GIS), scorecard KPI, peramalan/forecasting serapan anggaran, ekspor data (PDF/Excel), dan pengiriman laporan otomatis terjadwal.
+
+================================================================================
+8. MODUL PENDUKUNG, INTEGRASI & ADMINISTRASI SISTEM (WEB)
+================================================================================
+Pengguna: Administrator Sistem, Tim TI, Seluruh Bidang Terkait
+
+Fitur-fitur:
+- Single Beneficiary Registry (SBR): Master data tunggal penerima manfaat (NIK/NPWP/NIB), tracking riwayat bantuan lintas program dan lintas tahun, serta algoritma pencocokan otomatis (fuzzy matching deduplication) untuk menjamin zero duplication.
+- Manajemen Mitra Pelaksana: Modul pendaftaran dan verifikasi rekanan, evaluasi kinerja rekanan/vendor, serta manajemen daftar hitam (blacklist).
+- Integrasi Sistem Enterprise: Modul API/middleware ke sistem ERP SAP/FICO (anggaran & jurnal keuangan), integrasi host-to-host perbankan (pencairan & VA), integrasi e-KYC Dukcapil (validasi NIK), integrasi legalitas usaha OSS/AHU, dan integrasi SSO/LDAP perusahaan.
+- Manajemen Dokumen & Arsip: Pengelolaan template dokumen resmi, tanda tangan digital (e-sign) tersertifikasi, kontrol revisi dokumen (versioning), dan kebijakan retensi arsip digital.
+- Manajemen Risiko & Kepatuhan: Penyusunan risk register program kerja, deklarasi bebas benturan kepentingan, pemantauan gratifikasi, dan pendeteksian red flags kecurangan (fraud detection).
+- Manajemen Aset Program: Registrasi aset hasil program yang diserahkan ke masyarakat (BAST), pemantauan kondisi aset, dan jadwal rencana pemeliharaan.
+- Administrasi Sistem & Keamanan: Manajemen hak akses berbasis peran (RBAC), pengaturan autentikasi dua faktor (MFA/SSO), konfigurasi parameter rubrik penilaian tanpa coding, kamus data (data governance), dan log audit trail keamanan sistem.

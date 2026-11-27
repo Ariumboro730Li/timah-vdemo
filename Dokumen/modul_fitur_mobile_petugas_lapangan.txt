@@ -1,0 +1,63 @@
+MODUL DAN FITUR APLIKASI MOBILE 1: PETUGAS LAPANGAN (INTERNAL)
+Aplikasi Terintegrasi CSR / TJSL / PPM / PUMK
+(Berdasarkan Dokumen KAK CSR)
+
+Aplikasi ini dikhususkan bagi staf internal perusahaan, petugas lapangan CSR, surveyor, analis pembiayaan PUMK, petugas penagihan, serta tim monitoring & evaluasi (Monev) yang bertugas di lapangan dan wilayah operasional.
+
+================================================================================
+KARAKTERISTIK TEKNIS UTAMA
+================================================================================
+- Platform: Mobile Native/Hybrid (Android dan iOS).
+- Offline-First Architecture: Seluruh formulir survei, checklist inspeksi, dan dokumentasi foto dapat dioperasikan penuh tanpa koneksi internet di wilayah terpencil (remote area/wilayah tambang). Data tersimpan aman di penyimpanan lokal perangkat.
+- Auto Geotagging & Timestamp: Pengambilan koordinat GPS (latitude, longitude) dan stempel waktu akurat secara otomatis pada setiap foto bukti lapangan untuk menjamin keaslian data (anti-fraud).
+- Tanda Tangan Digital (E-Signature On-Screen): Pengambilan tanda tangan digital penerima manfaat atau mitra langsung di layar perangkat saat serah terima atau survei.
+- Sinkronisasi Otomatis: Sinkronisasi data latar belakang otomatis ke server pusat saat perangkat kembali mendapatkan sinyal internet, disertai indikator status antrean data (pending sync).
+
+================================================================================
+MODUL DAN FITUR FUNGSIONAL
+================================================================================
+
+1. MANAJEMEN PENUGASAN LAPANGAN (FIELD TASK MANAGEMENT)
+- Agenda Tugas Saya (My Tasks): Menampilkan daftar penugasan survei, verifikasi, inspeksi monev, dan kunjungan penagihan yang telah dijadwalkan dari sistem pusat.
+- Notifikasi Penugasan: Pemberitahuan penugasan baru dari pimpinan (Kabid/Kasie) disertai tenggat waktu (SLA) dan lokasi target di peta.
+- Peta Navigasi Lokasi: Rute dan petunjuk arah menuju titik lokasi calon penerima manfaat, kelompok binaan, atau tempat usaha mitra PUMK.
+
+2. ASESMEN & SURVEI CALON PENERIMA MANFAAT (PPM & FLAGSHIP)
+- Formulir Asesmen Dinamis: Kuesioner elektronik yang menyesuaikan dengan profil calon penerima manfaat (kelompok masyarakat, desa, koperasi, UMK, sarana pendidikan/kesehatan).
+- Perekaman Baseline Awal: Pencatatan data kondisi sosial-ekonomi awal calon penerima sebelum menerima bantuan (pendapatan, aset, kapasitas kelembagaan).
+- Dokumentasi Lapangan: Pengambilan foto kondisi fisik rumah, fasilitas warga, atau lokasi proyek dengan validasi kamera langsung (mencegah unggah foto galeri palsu).
+- Penilaian Cepat Kelayakan: Skoring awal kelayakan kelembagaan, kapasitas SDM, potensi komitmen, dan identifikasi potensi risiko sosial.
+
+3. VERIFIKASI BANTUAN TJSL / CHARITY (BANTUAN SOSIAL & KEDARURATAN)
+- Survei Singkat Verifikasi Proposal: Pemeriksaan keabsahan kondisi fisik pemohon dan urgensi kebutuhan bantuan kemasyarakatan di lapangan.
+- Jalur Tanggap Darurat Bencana (Fast-Track): Formulir verifikasi cepat untuk penyaluran bantuan logistik, medis, atau evakuasi bencana alam.
+- Berita Acara Serah Terima (BAST) Digital: Pengisian dokumen penyerahan bantuan secara langsung di lokasi, foto penyerahan barang/bantuan ter-geotag, kuitansi digital, dan penandatanganan elektronik oleh penerima bantuan di tempat.
+
+4. PENGAWASAN & PELAKSANAAN PROYEK PPM (IMPLEMENTASI)
+- Buku Catatan Lapangan Digital (Field Logbook): Penginputan catatan harian pengawasan pekerjaan proyek fisik, kendala di lapangan, dan deviasi teknis secara offline.
+- Absensi Digital Berbasis QR Code: Pemindaian barcode/QR code peserta pelatihan dan pembinaan kelompok binaan untuk memastikan kehadiran riil.
+- Dokumentasi Progres Milestone: Pengambilan foto berkala progres pekerjaan (kondisi 0%, 50%, hingga 100%) berkoordinat geografis untuk syarat persetujuan pencairan termin pembayaran mitra pelaksana.
+
+5. SURVEI KELAYAKAN USAHA CALON MITRA PUMK
+- Verifikasi Fisik Tempat Usaha: Pemeriksaan keberadaan dan kelayakan lokasi usaha calon debitur binaan PUMK.
+- Checklist Kelayakan 5C Lapangan: Verifikasi fisik tempat usaha, ketersediaan persediaan barang/bahan baku, kondisi peralatan kerja, dan kesesuaian Rencana Anggaran Biaya (RAB) modal kerja yang diajukan.
+- Dokumentasi Agunan & Tempat Usaha: Pemotretan tempat usaha, foto stok barang, serta aset yang dijadikan jaminan/fidusia (bila ada) lengkap dengan koordinat titik lokasi.
+- Berita Acara Survei Usaha: Pembuatan resume hasil survei lapangan yang dilengkapi rekomendasi analis dan tanda tangan digital calon debitur.
+
+6. FIELD COLLECTION & KUNJUNGAN PENAGIHAN PUMK
+- Monitoring Daftar Debitur Watchlist: Akses daftar debitur binaan yang menunggak (Days Past Due / DPD) di wilayah kerja petugas.
+- Workflow Kunjungan Penagihan: Formulir pencatatan hasil kunjungan lapangan penagihan pinjaman, verifikasi alasan keterlambatan pembayaran, dan pendataan kondisi usaha terkini mitra binaan.
+- Surat Komitmen Pembayaran: Penerbitan dan penandatanganan surat komitmen kesanggupan membayar angsuran secara digital di layar ponsel.
+
+7. INSPEKSI MONEV LAPANGAN & AUDIT FISIK
+- Pelaksanaan Checklist Monev: Pengisian instrumen pemeriksaan fisik proyek sesuai indikator kinerja yang telah ditetapkan di RKAP.
+- Perekaman Temuan Deviasi: Dokumentasi foto temuan ketidaksesuaian di lapangan, pencatatan akar masalah, dan perumusan rekomendasi tindakan korektif (action tracker).
+- Konfirmasi Bersama di Lapangan: Pengambilan tanda tangan digital perwakilan mitra pelaksana atau aparat desa setempat atas hasil temuan pemeriksaan.
+
+8. SURVEI SURVEILANS DAMPAK & KEPUASAN (MONEV)
+- Kuesioner Survei Dampak: Wawancara langsung ke penerima manfaat menggunakan kuesioner digital (survei midline, endline, dan evaluasi dampak SROI).
+- Survei Indeks Kepuasan: Pengumpulan umpan balik kepuasan masyarakat terhadap kualitas bantuan dan pendampingan perusahaan.
+
+9. SINKRONISASI DATA & PUSAT DOKUMEN OFFLINE
+- Status Antrean Unggah (Sync Manager): Pemantauan jumlah data formulir dan foto yang tersimpan lokal dan belum terkirim ke server pusat.
+- Download Paket Data Penugasan: Pengunduhan data master wilayah, daftar pemohon, dan kuesioner ke memori perangkat sebelum petugas berangkat ke wilayah tanpa sinyal.
