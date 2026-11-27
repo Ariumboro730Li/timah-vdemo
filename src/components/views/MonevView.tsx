@@ -28,6 +28,7 @@ import { getRolePolicy } from '../../utils/rbac';
 export const MonevView: React.FC = () => {
   const {
     userRole,
+    activeJourney,
     monevIndicators,
     monevIssues,
     lessonsLearned,
@@ -457,7 +458,7 @@ export const MonevView: React.FC = () => {
                       <span className="px-3 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
                         ✓ Sudah Masuk Perencanaan RKAP
                       </span>
-                    ) : policy.canApplyClosedLoop ? (
+                    ) : activeJourney === 'rkap' && policy.canApplyClosedLoop ? (
                       <button
                         onClick={() => applyLessonToRkap(ls.id)}
                         className="px-3.5 py-1.5 rounded-lg bg-violet-700 hover:bg-violet-800 text-white font-semibold inline-flex items-center gap-1.5"
@@ -467,7 +468,9 @@ export const MonevView: React.FC = () => {
                       </button>
                     ) : (
                       <span className="px-3 py-1 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">
-                        Menunggu Bidang Perencanaan / Monev
+                        {activeJourney === 'rkap'
+                          ? 'Menunggu Bidang Perencanaan / Monev'
+                          : 'Tersimpan sebagai Rekomendasi Evaluasi'}
                       </span>
                     )}
                   </div>

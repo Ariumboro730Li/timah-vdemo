@@ -1,27 +1,29 @@
 import React from 'react';
 import { NavView, UserRole } from '../../types';
 import {
-  LayoutDashboard,
   GitBranch,
   CalendarRange,
   FileCheck2,
   Hammer,
-  Award,
   Store,
   TrendingUp,
   UserCheck,
-  Upload,
   ShieldCheck,
   Building2,
-  Lock,
-  EyeOff
+  Lock
 } from 'lucide-react';
-import { getRolePolicy, isViewAllowed } from '../../utils/rbac';
+import {
+  ActiveJourney,
+  ROLE_JOURNEY_PRESETS,
+  getRolePolicy,
+  isViewAllowedInJourney
+} from '../../utils/rbac';
 
 interface SidebarProps {
   currentView: NavView;
   onNavigate: (view: NavView) => void;
   userRole: UserRole;
+  activeJourney: ActiveJourney;
   proposalPendingCount: number;
   isOpen?: boolean;
 }
@@ -30,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentView,
   onNavigate,
   userRole,
+  activeJourney,
   proposalPendingCount,
   isOpen = true
 }) => {
@@ -37,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const policy = getRolePolicy(userRole);
   const isPublic = userRole === 'pemohon';
+  const journeyDef = ROLE_JOURNEY_PRESETS[activeJourney];
 
   type SidebarNavItem = {
     id: NavView;
@@ -46,21 +50,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badgeColor?: string;
   };
 
-  const allOverviewNavItems: SidebarNavItem[] = [
-    {
-      id: 'dashboard',
-      label: isPublic ? 'Ringkasan Publik CSR' : 'Dashboard',
-      icon: <LayoutDashboard className="w-4 h-4" />
-    },
+  const allProgramNavItems: SidebarNavItem[] = [
     {
       id: 'portal',
       label: isPublic ? 'Portal Pemohon & Aduan' : 'Alur & Portal Pemohon',
       icon: <GitBranch className="w-4 h-4" />
-    }
-  ];
-  const overviewNavItems = allOverviewNavItems.filter((item) => isViewAllowed(userRole, item.id));
-
-  const allCycleNavItems: SidebarNavItem[] = [
+    },
     {
       id: 'perencanaan',
       label: 'Perencanaan & RKAP',
@@ -75,13 +70,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'implementasi',
-      label: 'Implementasi & Charity',
+      label: activeJourney === 'rkap' ? 'Implementasi SPK PPM' : 'Implementasi & Charity',
       icon: <Hammer className="w-4 h-4" />
-    },
-    {
-      id: 'flagship',
-      label: 'Program Flagship',
-      icon: <Award className="w-4 h-4" />
     },
     {
       id: 'pumk',
@@ -94,31 +84,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <TrendingUp className="w-4 h-4" />
     }
   ];
-  const cycleNavItems = allCycleNavItems.filter((item) => isViewAllowed(userRole, item.id));
+
+  const programNavItems = allProgramNavItems.filter((item) =>
+    isViewAllowedInJourney(userRole, activeJourney, item.id)
+  );
 
   const allGovernanceNavItems: SidebarNavItem[] = [
     {
       id: 'sbr',
-      label: 'Registry, Mitra & Aset',
+      label: activeJourney === 'pumk' ? 'Registry SBR & Risiko' : 'Registry, Mitra & Aset',
       icon: <UserCheck className="w-4 h-4" />
     },
     {
-      id: 'import',
-      label: 'Import & Migrasi Data',
-      icon: <Upload className="w-4 h-4" />
-    },
-    {
       id: 'integrasi',
-      label: 'Integrasi, Aturan & Audit',
+      label: 'Audit & Tata Kelola',
       icon: <ShieldCheck className="w-4 h-4" />
     }
   ];
-  const governanceNavItems = allGovernanceNavItems.filter((item) => isViewAllowed(userRole, item.id));
 
-  const renderGroup = (
-    heading: string,
-    items: { id: NavView; label: string; icon: React.ReactNode; badge?: string; badgeColor?: string }[]
-  ) => {
+  const governanceNavItems = allGovernanceNavItems.filter((item) =>
+    isViewAllowedInJourney(userRole, activeJourney, item.id)
+  );
+
+  const renderGroup = (heading: string, items: SidebarNavItem[]) => {
     if (items.length === 0) return null;
     return (
       <div>
@@ -166,19 +154,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         <div className="min-w-0">
           <div className="text-sm font-bold tracking-tight text-white truncate">CSR &bull; TJSL TIMAH</div>
-          <div className="text-sm text-slate-400 truncate">
-            {isPublic ? 'Portal Eksternal Publik' : 'Platform PPM & PUMK'}
-          </div>
+          <div className="text-sm text-sky-300 font-semibold truncate">{journeyDef.label}</div>
         </div>
       </div>
 
-      {/* Navigation Groups — Strict RBAC (Opsi 1) & Tanpa Penomoran */}
+      {/* Journey-Scoped Navigation Groups */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {renderGroup(isPublic ? 'Layanan Publik' : 'Utama', overviewNavItems)}
-        {renderGroup('Program', cycleNavItems)}
-        {renderGroup('Tata Kelola & Data', governanceNavItems)}
-
-       
+        {renderGroup(isPublic ? 'Layanan Pemohon' : `Modul ${journeyDef.label}`, programNavItems)}
+        {renderGroup('Pengawasan & Data', governanceNavItems)}
       </div>
 
       {/* User Footer */}

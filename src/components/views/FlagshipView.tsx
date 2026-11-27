@@ -506,7 +506,11 @@ export const FlagshipView: React.FC = () => {
                 min={0}
                 max={100}
                 value={perfScores[dim.key]}
-                onChange={(e) => setPerfScores({ ...perfScores, [dim.key]: Number(e.target.value) })}
+                onChange={(e) => {
+                  const raw = Number(e.target.value);
+                  const clamped = Number.isNaN(raw) ? 0 : Math.min(100, Math.max(0, raw));
+                  setPerfScores({ ...perfScores, [dim.key]: clamped });
+                }}
                 className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-center font-bold bg-white"
               />
             </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CharityItem } from '../../types';
 import {
   Plus,
@@ -11,7 +11,9 @@ import {
   QrCode,
   ShieldCheck,
   Eye,
-  Lock
+  Lock,
+  Search,
+  X
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { PaginationBar } from '../common/PaginationBar';
@@ -21,6 +23,7 @@ import { getRolePolicy, getCharityActionPermission, maskNik, maskAccountNo } fro
 export const ImplementasiView: React.FC = () => {
   const {
     userRole,
+    activeJourney,
     projects,
     charities,
     advanceProjectProgress,
@@ -29,13 +32,24 @@ export const ImplementasiView: React.FC = () => {
     advanceCharityStatus
   } = useAppState();
   const policy = getRolePolicy(userRole);
+  const isRkapJourney = activeJourney === 'rkap';
 
   const [activeTab, setActiveTab] = useState<'ppm' | 'charity'>('ppm');
+
+  useEffect(() => {
+    if (isRkapJourney && activeTab !== 'ppm') {
+      setActiveTab('ppm');
+    }
+  }, [isRkapJourney, activeTab]);
   const [ppmPage, setPpmPage] = useState(1);
   const [ppmPageSize, setPpmPageSize] = useState(5);
+  const [ppmStatusFilter, setPpmStatusFilter] = useState<'all' | 'berjalan' | 'review' | 'selesai'>('all');
+  const [ppmSearch, setPpmSearch] = useState('');
   const [chPage, setChPage] = useState(1);
   const [chPageSize, setChPageSize] = useState(5);
   const [charityCatFilter, setCharityCatFilter] = useState<'Semua' | CharityItem['category']>('Semua');
+  const [charityStatusFilter, setCharityStatusFilter] = useState<'Semua' | CharityItem['disbursementStatus']>('Semua');
+  const [charitySearch, setCharitySearch] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedCharityId, setSelectedCharityId] = useState<string | null>(null);
   const [isAddCharityOpen, setIsAddCharityOpen] = useState(false);
@@ -94,17 +108,19 @@ export const ImplementasiView: React.FC = () => {
           >
             Program PPM & Kontrak SPK ({projects.length})
           </button>
-          <button
-            onClick={() => setActiveTab('charity')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-              activeTab === 'charity' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Bantuan TJSL / Charity & Darurat ({charities.length})
-          </button>
+          {!isRkapJourney && (
+            <button
+              onClick={() => setActiveTab('charity')}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                activeTab === 'charity' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Bantuan TJSL / Charity & Darurat ({charities.length})
+            </button>
+          )}
         </div>
 
-        {policy.canCreateCharity && (
+        {!isRkapJourney && policy.canCreateCharity && (
           <button
             onClick={() => {
               setActiveTab('charity');
@@ -119,138 +135,418 @@ export const ImplementasiView: React.FC = () => {
       </div>
 
       {/* TAB 1: PROGRAM PPM */}
-      {activeTab === 'ppm' && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200">
-            <h3 className="font-bold text-slate-900">Pelaksanaan Program Pemberdayaan Masyarakat (PPM)</h3>
-            <p className="text-slate-500">
-              Terhubung dengan RKAP, Seleksi Proposal, SAP FICO, Absensi QR Lapangan, Geotag, dan otomatis mendaftarkan Aset saat BAST selesai.
-            </p>
+      {activeTab === 'ppm' && (() => {
+        const isSelesai = (p: (typeof projects)[number]) => p.bastSigned && p.lpjStatus === 'Terverifikasi';
+        const isReview = (p: (typeof projects)[number]) =>
+          !isSelesai(p) && (p.lpjStatus === 'Review' || p.progressPercent >= 100);
+        const isBerjalan = (p: (typeof projects)[number]) => !isSelesai(p) && !isReview(p);
+
+        const countAll = projects.length;
+        const countBerjalan = projects.filter(isBerjalan).length;
+        const countReview = projects.filter(isReview).length;
+        const countSelesai = projects.filter(isSelesai).length;
+
+        const q = ppmSearch.trim().toLowerCase();
+        const filteredProjects = projects.filter((prj) => {
+          const matchStatus =
+            ppmStatusFilter === 'all'
+              ? true
+              : ppmStatusFilter === 'berjalan'
+              ? isBerjalan(prj)
+              : ppmStatusFilter === 'review'
+              ? isReview(prj)
+              : isSelesai(prj);
+          if (!matchStatus) return false;
+          if (!q) return true;
+          return (
+            prj.title.toLowerCase().includes(q) ||
+            prj.spkNo.toLowerCase().includes(q) ||
+            prj.partner.toLowerCase().includes(q) ||
+            prj.location.toLowerCase().includes(q) ||
+            prj.sapPoNo.toLowerCase().includes(q) ||
+            prj.sapStatus.toLowerCase().includes(q) ||
+            prj.lpjStatus.toLowerCase().includes(q) ||
+            (prj.sourceProposalTicket || '').toLowerCase().includes(q) ||
+            (prj.sourceRkapCode || '').toLowerCase().includes(q)
+          );
+        });
+
+        const ppmStatusLabelMap: Record<'all' | 'berjalan' | 'review' | 'selesai', string> = {
+          all: 'Semua Proyek PPM',
+          berjalan: 'Sedang Berjalan (LPJ Belum)',
+          review: 'Review LPJ / Siap BAST',
+          selesai: 'Selesai (LPJ & BAST)'
+        };
+
+        const ppmCards: {
+          id: 'all' | 'berjalan' | 'review' | 'selesai';
+          label: string;
+          count: number;
+          sub: string;
+          ringClass: string;
+          textClass: string;
+        }[] = [
+          {
+            id: 'all',
+            label: 'Total Proyek SPK PPM',
+            count: countAll,
+            sub: 'Klik untuk tampilkan semua',
+            ringClass: 'border-sky-500 ring-2 ring-sky-200 bg-sky-50/70',
+            textClass: 'text-slate-900'
+          },
+          {
+            id: 'berjalan',
+            label: 'Sedang Berjalan (LPJ Belum)',
+            count: countBerjalan,
+            sub: 'Pelaksanaan fisik & termin SAP',
+            ringClass: 'border-amber-500 ring-2 ring-amber-200 bg-amber-50/70',
+            textClass: 'text-amber-700'
+          },
+          {
+            id: 'review',
+            label: 'Review LPJ / Siap BAST',
+            count: countReview,
+            sub: 'Menunggu verifikasi LPJ & BAST',
+            ringClass: 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/70',
+            textClass: 'text-indigo-700'
+          },
+          {
+            id: 'selesai',
+            label: 'Selesai (LPJ & BAST)',
+            count: countSelesai,
+            sub: 'Tuntas 100% & tercatat di Aset',
+            ringClass: 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/70',
+            textClass: 'text-emerald-700'
+          }
+        ];
+
+        return (
+        <div className="space-y-4">
+          {/* Interactive Status Cards synced to PPM Table */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {ppmCards.map((card) => {
+              const active = ppmStatusFilter === card.id;
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => {
+                    setPpmStatusFilter((curr) => (curr === card.id && card.id !== 'all' ? 'all' : card.id));
+                    setPpmPage(1);
+                  }}
+                  className={`text-left p-4 rounded-xl border transition-all cursor-pointer shadow-sm ${
+                    active
+                      ? card.ringClass
+                      : 'bg-white border-slate-200 hover:border-sky-300 hover:bg-slate-50/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-slate-600">{card.label}</span>
+                    {active && (
+                      <span className="px-2 py-0.5 rounded-full bg-slate-900 text-white font-semibold text-sm">
+                        Aktif
+                      </span>
+                    )}
+                  </div>
+                  <div className={`text-2xl font-bold mt-1.5 ${card.textClass}`}>{card.count}</div>
+                  <div className="text-slate-500 mt-1">{card.sub}</div>
+                </button>
+              );
+            })}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold">
-                  <th className="py-3 px-4">SPK & Kegiatan</th>
-                  <th className="py-3 px-4">Mitra & Lokasi Geotag</th>
-                  <th className="py-3 px-4">Nilai & Realisasi</th>
-                  <th className="py-3 px-4">Integrasi SAP FICO</th>
-                  <th className="py-3 px-4">Bukti Lapangan</th>
-                  <th className="py-3 px-4 text-center">RAG / LPJ</th>
-                  <th className="py-3 px-4 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {projects.slice((ppmPage - 1) * ppmPageSize, ppmPage * ppmPageSize).map((prj) => (
-                  <tr key={prj.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4">
+
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-bold text-slate-900">Pelaksanaan Program Pemberdayaan Masyarakat (PPM)</h3>
+                  {(ppmStatusFilter !== 'all' || ppmSearch.trim() !== '') && (
+                    <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-900 font-semibold">
+                      <span>
+                        {ppmStatusLabelMap[ppmStatusFilter]} ({filteredProjects.length})
+                      </span>
                       <button
                         type="button"
-                        onClick={() => setSelectedProjectId(prj.id)}
-                        className="font-semibold text-slate-900 hover:text-sky-700 hover:underline text-left"
+                        onClick={() => {
+                          setPpmStatusFilter('all');
+                          setPpmSearch('');
+                          setPpmPage(1);
+                        }}
+                        className="text-sky-700 hover:text-rose-700 font-bold underline"
                       >
-                        {prj.title}
+                        Reset
                       </button>
-                      <div className="font-mono text-sky-800">{prj.spkNo}</div>
-                      {(prj.sourceRkapCode || prj.sourceProposalTicket) && (
-                        <div className="text-slate-500">
-                          Sumber: {prj.sourceRkapCode || prj.sourceProposalTicket}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-800">{prj.partner}</div>
-                      <a
-                        href={`https://www.google.com/maps?q=${encodeURIComponent(prj.geotagCoord)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1 inline-flex items-center gap-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 px-2 py-0.5 rounded font-mono border border-slate-200"
-                      >
-                        <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                        <span>{prj.location}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900">
-                        Rp {(prj.contractValue / 1000000).toLocaleString('id-ID')} Jt
-                      </div>
-                      <div className="text-emerald-700">
-                        Cair: Rp {(prj.realizedValue / 1000000).toLocaleString('id-ID')} Jt ({prj.progressPercent}%)
-                      </div>
-                      <div className="w-28 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
-                        <div className="h-full bg-sky-500 rounded-full" style={{ width: `${prj.progressPercent}%` }}></div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-mono font-bold text-slate-700">PO: {prj.sapPoNo}</div>
-                      <span
-                        className={`inline-block mt-0.5 font-semibold px-2 py-0.5 rounded ${
-                          prj.sapStatus === 'Posted' || prj.sapStatus === 'Settled'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-amber-50 text-amber-700'
-                        }`}
-                      >
-                        {prj.sapStatus}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="inline-flex items-center gap-1.5 text-slate-700 font-semibold">
-                        <Camera className="w-4 h-4 text-sky-600" />
-                        <span>{prj.geotagPhotos} Foto Geotag</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-500 mt-0.5">
-                        <QrCode className="w-4 h-4 text-slate-400" />
-                        <span>{prj.qrAttendanceCount} Absensi QR</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded font-semibold ${
-                          prj.ragStatus === 'Hijau'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : prj.ragStatus === 'Kuning'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}
-                      >
-                        {prj.ragStatus}
-                      </span>
-                      <div className="text-slate-500 mt-1">LPJ: {prj.lpjStatus}</div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedProjectId(prj.id)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-semibold inline-flex items-center gap-1.5"
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span>Detail</span>
-                      </button>
-                    </td>
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-500">
+                  Terhubung dengan RKAP, Seleksi Proposal, SAP FICO, Absensi QR Lapangan, Geotag, dan otomatis mendaftarkan Aset saat BAST selesai.
+                </p>
+              </div>
+
+              {/* Search Input synced to PPM Table */}
+              <div className="relative w-full lg:w-80 flex-shrink-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={ppmSearch}
+                  onChange={(e) => {
+                    setPpmSearch(e.target.value);
+                    setPpmPage(1);
+                  }}
+                  placeholder="Cari SPK, kegiatan, mitra, PO, tiket..."
+                  className="w-full pl-9 pr-9 py-2 rounded-lg border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-sm bg-slate-50 focus:bg-white transition-all"
+                />
+                {ppmSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPpmSearch('');
+                      setPpmPage(1);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                    title="Hapus pencarian"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold">
+                    <th className="py-3 px-4">SPK & Kegiatan</th>
+                    <th className="py-3 px-4">Mitra & Lokasi Geotag</th>
+                    <th className="py-3 px-4">Nilai & Realisasi</th>
+                    <th className="py-3 px-4">Integrasi SAP FICO</th>
+                    <th className="py-3 px-4">Bukti Lapangan</th>
+                    <th className="py-3 px-4 text-center">RAG / LPJ</th>
+                    <th className="py-3 px-4 text-right">Aksi</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredProjects.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 px-4 text-center text-slate-500">
+                        <div className="font-semibold text-slate-700">
+                          Tidak ada proyek PPM yang cocok dengan filter atau pencarian saat ini.
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPpmStatusFilter('all');
+                            setPpmSearch('');
+                            setPpmPage(1);
+                          }}
+                          className="mt-3 px-4 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                        >
+                          Tampilkan Semua Proyek ({projects.length})
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                  filteredProjects.slice((ppmPage - 1) * ppmPageSize, ppmPage * ppmPageSize).map((prj) => (
+                    <tr key={prj.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3 px-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProjectId(prj.id)}
+                          className="font-semibold text-slate-900 hover:text-sky-700 hover:underline text-left"
+                        >
+                          {prj.title}
+                        </button>
+                        <div className="font-mono text-sky-800">{prj.spkNo}</div>
+                        {(prj.sourceRkapCode || prj.sourceProposalTicket) && (
+                          <div className="text-slate-500">
+                            Sumber: {prj.sourceRkapCode || prj.sourceProposalTicket}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-800">{prj.partner}</div>
+                        <a
+                          href={`https://www.google.com/maps?q=${encodeURIComponent(prj.geotagCoord)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-flex items-center gap-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 px-2 py-0.5 rounded font-mono border border-slate-200"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                          <span>{prj.location}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-slate-900">
+                          Rp {(prj.contractValue / 1000000).toLocaleString('id-ID')} Jt
+                        </div>
+                        <div className="text-emerald-700">
+                          Cair: Rp {(prj.realizedValue / 1000000).toLocaleString('id-ID')} Jt ({prj.progressPercent}%)
+                        </div>
+                        <div className="w-28 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                          <div className="h-full bg-sky-500 rounded-full" style={{ width: `${prj.progressPercent}%` }}></div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-mono font-bold text-slate-700">PO: {prj.sapPoNo}</div>
+                        <span
+                          className={`inline-block mt-0.5 font-semibold px-2 py-0.5 rounded ${
+                            prj.sapStatus === 'Posted' || prj.sapStatus === 'Settled'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {prj.sapStatus}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="inline-flex items-center gap-1.5 text-slate-700 font-semibold">
+                          <Camera className="w-4 h-4 text-sky-600" />
+                          <span>{prj.geotagPhotos} Foto Geotag</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-slate-500 mt-0.5">
+                          <QrCode className="w-4 h-4 text-slate-400" />
+                          <span>{prj.qrAttendanceCount} Absensi QR</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded font-semibold ${
+                            prj.ragStatus === 'Hijau'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : prj.ragStatus === 'Kuning'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}
+                        >
+                          {prj.ragStatus}
+                        </span>
+                        <div className="text-slate-500 mt-1">LPJ: {prj.lpjStatus}</div>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProjectId(prj.id)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-semibold inline-flex items-center gap-1.5"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Detail</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <PaginationBar
+              totalItems={filteredProjects.length}
+              currentPage={ppmPage}
+              pageSize={ppmPageSize}
+              onPageChange={setPpmPage}
+              onPageSizeChange={setPpmPageSize}
+            />
           </div>
-          <PaginationBar
-            totalItems={projects.length}
-            currentPage={ppmPage}
-            pageSize={ppmPageSize}
-            onPageChange={setPpmPage}
-            onPageSizeChange={setPpmPageSize}
-          />
         </div>
-      )}
+        );
+      })()}
 
       {/* TAB 2: BANTUAN CHARITY / SOSIAL KEMASYARAKATAN */}
       {activeTab === 'charity' && (() => {
-        const filteredCharities =
-          charityCatFilter === 'Semua'
-            ? charities
-            : charities.filter((c) => c.category === charityCatFilter);
+        const chQ = charitySearch.trim().toLowerCase();
+        const filteredCharities = charities.filter((c) => {
+          if (charityCatFilter !== 'Semua' && c.category !== charityCatFilter) return false;
+          if (charityStatusFilter !== 'Semua' && c.disbursementStatus !== charityStatusFilter) return false;
+          if (!chQ) return true;
+          return (
+            c.ticketNo.toLowerCase().includes(chQ) ||
+            c.applicant.toLowerCase().includes(chQ) ||
+            c.nik.toLowerCase().includes(chQ) ||
+            c.category.toLowerCase().includes(chQ) ||
+            c.location.toLowerCase().includes(chQ) ||
+            c.disbursementStatus.toLowerCase().includes(chQ) ||
+            c.approverLevel.toLowerCase().includes(chQ)
+          );
+        });
+
+        const charityStatusCards: {
+          status: 'Semua' | CharityItem['disbursementStatus'];
+          label: string;
+          count: number;
+          ringClass: string;
+          textClass: string;
+        }[] = [
+          {
+            status: 'Semua',
+            label: 'Total Tiket Charity',
+            count: charities.length,
+            ringClass: 'border-sky-500 ring-2 ring-sky-200 bg-sky-50/70',
+            textClass: 'text-slate-900'
+          },
+          {
+            status: 'Verifikasi',
+            label: 'Verifikasi Berkas',
+            count: charities.filter((c) => c.disbursementStatus === 'Verifikasi').length,
+            ringClass: 'border-amber-500 ring-2 ring-amber-200 bg-amber-50/70',
+            textClass: 'text-amber-700'
+          },
+          {
+            status: 'Menunggu Persetujuan',
+            label: 'Menunggu Persetujuan',
+            count: charities.filter((c) => c.disbursementStatus === 'Menunggu Persetujuan').length,
+            ringClass: 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/70',
+            textClass: 'text-indigo-700'
+          },
+          {
+            status: 'Cair ke Penerima',
+            label: 'Cair · Menunggu BAST',
+            count: charities.filter((c) => c.disbursementStatus === 'Cair ke Penerima').length,
+            ringClass: 'border-cyan-500 ring-2 ring-cyan-200 bg-cyan-50/70',
+            textClass: 'text-sky-700'
+          },
+          {
+            status: 'BAST Selesai',
+            label: 'BAST Selesai',
+            count: charities.filter((c) => c.disbursementStatus === 'BAST Selesai').length,
+            ringClass: 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/70',
+            textClass: 'text-emerald-700'
+          }
+        ];
+
         return (
-        <div className="space-y-6">
+        <div className="space-y-4">
+          {/* Interactive Status Cards synced to Charity Table */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {charityStatusCards.map((sc) => {
+              const active = charityStatusFilter === sc.status;
+              return (
+                <button
+                  key={sc.status}
+                  type="button"
+                  onClick={() => {
+                    setCharityStatusFilter((curr) => (curr === sc.status && sc.status !== 'Semua' ? 'Semua' : sc.status));
+                    setChPage(1);
+                  }}
+                  className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer shadow-sm ${
+                    active
+                      ? sc.ringClass
+                      : 'bg-white border-slate-200 hover:border-sky-300 hover:bg-slate-50/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-semibold text-slate-600">{sc.label}</span>
+                    {active && (
+                      <span className="px-2 py-0.5 rounded-full bg-slate-900 text-white font-semibold text-sm">
+                        Aktif
+                      </span>
+                    )}
+                  </div>
+                  <div className={`text-2xl font-bold mt-1 ${sc.textClass}`}>{sc.count}</div>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Sub-limit Pagu per Kategori (C-03) — Interactive Filter Cards */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -308,26 +604,58 @@ export const ImplementasiView: React.FC = () => {
 
           {/* Charity Table */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-200">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-bold text-slate-900">Penyaluran Bantuan TJSL / Charity & Jalur Darurat (SOP 11.2)</h3>
-                {charityCatFilter !== 'Semua' && (
-                  <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-900 font-semibold">
-                    <span>Kategori: {charityCatFilter} ({filteredCharities.length})</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCharityCatFilter('Semua');
-                        setChPage(1);
-                      }}
-                      className="text-sky-700 hover:text-rose-700 font-bold underline"
-                    >
-                      Reset
-                    </button>
-                  </span>
+            <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-bold text-slate-900">Penyaluran Bantuan TJSL / Charity & Jalur Darurat (SOP 11.2)</h3>
+                  {(charityCatFilter !== 'Semua' || charityStatusFilter !== 'Semua' || charitySearch.trim() !== '') && (
+                    <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-900 font-semibold">
+                      <span>Hasil Filter: {filteredCharities.length} tiket</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCharityCatFilter('Semua');
+                          setCharityStatusFilter('Semua');
+                          setCharitySearch('');
+                          setChPage(1);
+                        }}
+                        className="text-sky-700 hover:text-rose-700 font-bold underline"
+                      >
+                        Reset
+                      </button>
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-500">Dilengkapi deteksi fraud/anomali, deklarasi bebas benturan kepentingan (COI), dan pencairan langsung (direct to beneficiary)</p>
+              </div>
+
+              {/* Search Input synced to Charity Table */}
+              <div className="relative w-full lg:w-80 flex-shrink-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={charitySearch}
+                  onChange={(e) => {
+                    setCharitySearch(e.target.value);
+                    setChPage(1);
+                  }}
+                  placeholder="Cari tiket, penerima, lokasi, status..."
+                  className="w-full pl-9 pr-9 py-2 rounded-lg border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-sm bg-slate-50 focus:bg-white transition-all"
+                />
+                {charitySearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCharitySearch('');
+                      setChPage(1);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                    title="Hapus pencarian"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 )}
               </div>
-              <p className="text-slate-500">Dilengkapi deteksi fraud/anomali, deklarasi bebas benturan kepentingan (COI), dan pencairan langsung (direct to beneficiary)</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">

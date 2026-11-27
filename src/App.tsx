@@ -17,7 +17,16 @@ import { IntegrasiView } from './components/views/IntegrasiView';
 import { Modal } from './components/common/Modal';
 import { ImportDataModal } from './components/common/ImportDataModal';
 import { CheckCircle2, Info, AlertTriangle, X, ShieldAlert } from 'lucide-react';
-import { getRolePolicy, isViewAllowed, maskNik } from './utils/rbac';
+import {
+  ActiveJourney,
+  ROLE_JOURNEY_PRESETS,
+  getRolePolicy,
+  isRoleInJourney,
+  getJourneyFirstRole,
+  isViewAllowedInJourney,
+  getJourneyDefaultViewForRole,
+  maskNik
+} from './utils/rbac';
 
 type IntegrasiTab = 'integrasi' | 'config' | 'rbac' | 'audit' | 'snapshot';
 
@@ -81,15 +90,42 @@ function buildUrlForView(view: NavView, integrasiTab?: IntegrasiTab | null): str
 }
 
 const AppShell: React.FC = () => {
-  const { userRole, setUserRole, showToast, proposals, sbrDatabase, snapshotMeta, syncStatus, toast, clearToast } = useAppState();
-  const initialPolicy = getRolePolicy(userRole);
-  const initialRoute = parseRouteFromLocation(initialPolicy.defaultView);
+  const {
+    userRole,
+    setUserRole,
+    activeJourney,
+    setActiveJourney,
+    showToast,
+    proposals,
+    sbrDatabase,
+    snapshotMeta,
+    syncStatus,
+    toast,
+    clearToast
+  } = useAppState();
+
+  const effectiveRole: UserRole = isRoleInJourney(userRole, activeJourney)
+    ? userRole
+    : getJourneyFirstRole(activeJourney);
+
+  // Align stored role if it is outside the active journey
+  useEffect(() => {
+    if (effectiveRole !== userRole) {
+      setUserRole(effectiveRole);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeJourney, effectiveRole, userRole]);
+
+  const defaultViewForActive = getJourneyDefaultViewForRole(effectiveRole, activeJourney);
+  const initialRoute = parseRouteFromLocation(defaultViewForActive);
 
   const [currentView, setCurrentView] = useState<NavView>(() =>
-    isViewAllowed(userRole, initialRoute.view) ? initialRoute.view : initialPolicy.defaultView
+    isViewAllowedInJourney(effectiveRole, activeJourney, initialRoute.view)
+      ? initialRoute.view
+      : defaultViewForActive
   );
   const [integrasiInitialTab, setIntegrasiInitialTab] = useState<IntegrasiTab>(
-    initialRoute.integrasiTab || (userRole === 'spi' ? 'audit' : userRole === 'sysadmin' ? 'rbac' : 'integrasi')
+    initialRoute.integrasiTab || (effectiveRole === 'spi' ? 'audit' : 'audit')
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isQuickSbrOpen, setIsQuickSbrOpen] = useState(false);
@@ -97,8 +133,10 @@ const AppShell: React.FC = () => {
   const [quickNikInput, setQuickNikInput] = useState('1901042508820003');
   const [quickNikResult, setQuickNikResult] = useState<any>(null);
 
-  const policy = getRolePolicy(userRole);
-  const effectiveView: NavView = isViewAllowed(userRole, currentView) ? currentView : policy.defaultView;
+  const policy = getRolePolicy(effectiveRole);
+  const effectiveView: NavView = isViewAllowedInJourney(effectiveRole, activeJourney, currentView)
+    ? currentView
+    : defaultViewForActive;
 
   const syncBrowserUrl = (view: NavView, mode: 'push' | 'replace', tab?: IntegrasiTab | null) => {
     const targetUrl = buildUrlForView(view, tab);
@@ -111,7 +149,7 @@ const AppShell: React.FC = () => {
     }
   };
 
-  // Normalize initial URL on mount (e.g. "/" -> "/dashboard")
+  // Normalize initial URL on mount
   useEffect(() => {
     syncBrowserUrl(effectiveView, 'replace', effectiveView === 'integrasi' ? integrasiInitialTab : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,52 +158,72 @@ const AppShell: React.FC = () => {
   // Listen to browser Back / Forward buttons
   useEffect(() => {
     const handlePopState = () => {
-      const rolePolicy = getRolePolicy(userRole);
-      const parsed = parseRouteFromLocation(rolePolicy.defaultView);
-      if (isViewAllowed(userRole, parsed.view)) {
+      const rolePolicy = getRolePolicy(effectiveRole);
+      const fallback = getJourneyDefaultViewForRole(effectiveRole, activeJourney);
+      const parsed = parseRouteFromLocation(fallback);
+      if (isViewAllowedInJourney(effectiveRole, activeJourney, parsed.view)) {
         setCurrentView(parsed.view);
         if (parsed.view === 'integrasi') {
-          setIntegrasiInitialTab(parsed.integrasiTab || 'integrasi');
+          setIntegrasiInitialTab(parsed.integrasiTab || 'audit');
         }
       } else {
-        setCurrentView(rolePolicy.defaultView);
-        syncBrowserUrl(rolePolicy.defaultView, 'replace');
-        showToast(`Halaman tujuan dibatasi untuk peran ${rolePolicy.label} (RBAC KAK).`, 'warning');
+        setCurrentView(fallback);
+        syncBrowserUrl(fallback, 'replace');
+        showToast(
+          `Halaman tujuan berada di luar ${ROLE_JOURNEY_PRESETS[activeJourney].label} untuk peran ${rolePolicy.label}.`,
+          'warning'
+        );
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [userRole, showToast]);
+  }, [effectiveRole, activeJourney, showToast]);
+
+  const handleJourneyChange = (nextJourney: ActiveJourney) => {
+    setActiveJourney(nextJourney);
+    const nextRole = isRoleInJourney(effectiveRole, nextJourney)
+      ? effectiveRole
+      : getJourneyFirstRole(nextJourney);
+    if (nextRole !== userRole) {
+      setUserRole(nextRole);
+    }
+    const targetView = getJourneyDefaultViewForRole(nextRole, nextJourney);
+    const nextTab: IntegrasiTab = nextRole === 'spi' ? 'audit' : integrasiInitialTab;
+    if (nextRole === 'spi') setIntegrasiInitialTab('audit');
+
+    setCurrentView(targetView);
+    syncBrowserUrl(targetView, 'push', targetView === 'integrasi' ? nextTab : null);
+    showToast(
+      `Fokus diubah ke ${ROLE_JOURNEY_PRESETS[nextJourney].label} (${getRolePolicy(nextRole).shortName}). Hanya modul & fitur alur ini yang ditampilkan.`,
+      'info'
+    );
+  };
 
   const handleRoleChange = (nextRole: UserRole) => {
     setUserRole(nextRole);
     const nextPolicy = getRolePolicy(nextRole);
-    let nextTab = integrasiInitialTab;
+    const targetView = getJourneyDefaultViewForRole(nextRole, activeJourney);
+    const nextTab: IntegrasiTab = nextRole === 'spi' ? 'audit' : integrasiInitialTab;
     if (nextRole === 'spi') {
-      nextTab = 'audit';
       setIntegrasiInitialTab('audit');
-    } else if (nextRole === 'sysadmin') {
-      nextTab = 'rbac';
-      setIntegrasiInitialTab('rbac');
     }
 
-    if (!isViewAllowed(nextRole, currentView)) {
-      setCurrentView(nextPolicy.defaultView);
-      syncBrowserUrl(nextPolicy.defaultView, 'push', nextPolicy.defaultView === 'integrasi' ? nextTab : null);
-    } else if (currentView === 'integrasi') {
-      syncBrowserUrl('integrasi', 'replace', nextTab);
-    }
+    setCurrentView(targetView);
+    syncBrowserUrl(targetView, 'push', targetView === 'integrasi' ? nextTab : null);
 
     showToast(
-      `Mode peran diubah ke ${nextPolicy.label} (${nextPolicy.allowedViews.length} menu aktif${nextPolicy.canViewUnmaskedPii ? ', e-KYC Penuh' : ', Masking UU PDP'}).`,
+      `Beralih ke ${nextPolicy.label} pada ${ROLE_JOURNEY_PRESETS[activeJourney].label} (${getPageTitle(targetView)}).`,
       'info'
     );
   };
 
   const handleNavigate = (view: NavView, tab?: IntegrasiTab) => {
-    if (!isViewAllowed(userRole, view)) {
-      showToast(`Menu tersebut tidak tersedia untuk peran ${policy.label} (RBAC KAK).`, 'warning');
+    if (!isViewAllowedInJourney(effectiveRole, activeJourney, view)) {
+      showToast(
+        `Menu tersebut tidak termasuk dalam ${ROLE_JOURNEY_PRESETS[activeJourney].label} untuk peran ${policy.label}.`,
+        'warning'
+      );
       return;
     }
     const targetTab = view === 'integrasi' ? tab || integrasiInitialTab : null;
@@ -235,24 +293,37 @@ const AppShell: React.FC = () => {
   const handleQuickNikCheck = () => {
     const cleanNik = quickNikInput.replace(/\D/g, '');
     const found = sbrDatabase.find((b) => b.nik === cleanNik);
+    const matchedProposals = proposals.filter((p) => p.nik === cleanNik);
     if (found) {
-      setQuickNikResult(found);
+      setQuickNikResult({ ...found, matchedProposals });
+    } else if (matchedProposals.length > 0) {
+      const first = matchedProposals[0];
+      setQuickNikResult({
+        nik: cleanNik,
+        name: first.applicant,
+        address: `${first.location} (${first.ring})`,
+        isBlacklisted: first.sbrStatus === 'Blacklist',
+        programHistory: [],
+        matchedProposals
+      });
     } else {
       setQuickNikResult({
         nik: cleanNik || quickNikInput,
         name: 'Tidak Ditemukan',
-        isNew: true
+        isNew: true,
+        matchedProposals: []
       });
     }
   };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-100">
-      {/* Sidebar — Strict RBAC & Tanpa Penomoran */}
+      {/* Sidebar — Journey-Scoped & Strict RBAC */}
       <Sidebar
         currentView={effectiveView}
         onNavigate={handleNavigate}
-        userRole={userRole}
+        userRole={effectiveRole}
+        activeJourney={activeJourney}
         proposalPendingCount={pendingProposalsCount}
         isOpen={isSidebarOpen}
       />
@@ -261,13 +332,14 @@ const AppShell: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header
           title={getPageTitle(effectiveView)}
-          role={userRole}
+          role={effectiveRole}
+          activeJourney={activeJourney}
           onRoleChange={handleRoleChange}
+          onJourneyChange={handleJourneyChange}
           onOpenSbrSearch={() => {
             setIsQuickSbrOpen(true);
             setQuickNikResult(null);
           }}
-          onOpenQuickImport={() => setIsQuickImportOpen(true)}
           onOpenSnapshotView={() => {
             handleNavigate('integrasi', 'snapshot');
           }}
@@ -385,7 +457,6 @@ const AppShell: React.FC = () => {
                       <div className="font-bold text-slate-900">{quickNikResult.name}</div>
                       <div className="font-mono text-sky-800">
                         NIK: {maskNik(quickNikResult.nik, userRole)}{' '}
-                        {!policy.canViewUnmaskedPii && <span className="text-amber-700 font-sans font-semibold">(Masked UU PDP)</span>}
                       </div>
                     </div>
                     {quickNikResult.isBlacklisted && (
@@ -405,6 +476,19 @@ const AppShell: React.FC = () => {
                       <div>Tidak ada catatan bantuan lalu.</div>
                     )}
                   </div>
+                  {quickNikResult.matchedProposals && quickNikResult.matchedProposals.length > 0 && (
+                    <div className="p-3 bg-sky-50 border border-sky-200 rounded text-sky-950 mt-2 space-y-1">
+                      <span className="font-semibold block text-sky-900">
+                        Proposal Masuk Terdaftar ({quickNikResult.matchedProposals.length}):
+                      </span>
+                      {quickNikResult.matchedProposals.map((p: any) => (
+                        <div key={p.id} className="border-t border-sky-200/70 pt-1">
+                          <span className="font-mono font-bold">{p.ticketNo}</span> &bull; {p.category} &bull;{' '}
+                          <strong>Rp {p.requestedAmount.toLocaleString('id-ID')}</strong> ({p.approvalStatus})
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </div>

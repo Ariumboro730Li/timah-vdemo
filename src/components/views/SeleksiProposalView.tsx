@@ -26,6 +26,8 @@ import { getRolePolicy, canRoleApproveByAuthority, maskNik } from '../../utils/r
 export const SeleksiProposalView: React.FC = () => {
   const {
     userRole,
+    setUserRole,
+    showToast,
     proposals,
     sbrDatabase,
     scoringRubric,
@@ -36,6 +38,17 @@ export const SeleksiProposalView: React.FC = () => {
     getApproverByAmount
   } = useAppState();
   const policy = getRolePolicy(userRole);
+
+  const switchToApproverRole = (approverLevel: 'Kabid' | 'Kepala Divisi' | 'Direksi / Komite') => {
+    const targetRole =
+      approverLevel === 'Direksi / Komite'
+        ? 'direksi'
+        : approverLevel === 'Kepala Divisi'
+        ? 'kadiv'
+        : 'implementasi';
+    setUserRole(targetRole);
+    showToast(`Beralih ke peran ${approverLevel} agar dapat memproses persetujuan ini.`, 'info');
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
@@ -385,6 +398,37 @@ export const SeleksiProposalView: React.FC = () => {
                       >
                         {item.recommendation}
                       </span>
+                      {/* Mini 4-step visual status trail */}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        {[
+                          { label: '1. Nilai', done: item.score !== undefined },
+                          {
+                            label: '2. Komite',
+                            done: item.committeeDecision === 'Disetujui Komite' || item.committeeDecision === 'Disetujui Bersyarat',
+                            failed: item.committeeDecision === 'Ditolak'
+                          },
+                          {
+                            label: '3. Approve',
+                            done: item.approvalStatus === 'Disetujui',
+                            failed: item.approvalStatus === 'Ditolak'
+                          },
+                          { label: '4. Impl', done: Boolean(item.convertedToImpl) }
+                        ].map((st) => (
+                          <span
+                            key={st.label}
+                            className={`px-1.5 py-0.5 rounded border font-semibold ${
+                              st.failed
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : st.done
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}
+                          >
+                            {st.done ? '✓ ' : st.failed ? '✗ ' : ''}
+                            {st.label}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex flex-col items-end gap-1.5">
@@ -419,10 +463,18 @@ export const SeleksiProposalView: React.FC = () => {
                               Setujui Rapat Komite
                             </button>
                           ) : (
-                            <span className="px-2.5 py-1 rounded bg-slate-100 text-slate-500 border border-slate-200 font-semibold inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserRole('kadiv');
+                                showToast('Beralih ke Kepala Divisi CSR untuk keputusan Rapat Komite.', 'info');
+                              }}
+                              title="Klik untuk beralih ke peran Kepala Divisi CSR"
+                              className="px-2.5 py-1 rounded bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 border border-slate-200 hover:border-indigo-300 font-semibold inline-flex items-center gap-1"
+                            >
                               <Lock className="w-3.5 h-3.5" />
-                              <span>Menunggu Komite</span>
-                            </span>
+                              <span>Menunggu Komite (Pindah Kadiv)</span>
+                            </button>
                           )
                         )}
 
@@ -437,13 +489,15 @@ export const SeleksiProposalView: React.FC = () => {
                               <span>Approve ({approverLevel})</span>
                             </button>
                           ) : (
-                            <span
-                              title={`Sesuai Lampiran B KAK, nominal Rp ${item.requestedAmount.toLocaleString('id-ID')} memerlukan persetujuan ${approverLevel}`}
-                              className="px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold inline-flex items-center gap-1"
+                            <button
+                              type="button"
+                              onClick={() => switchToApproverRole(approverLevel)}
+                              title={`Sesuai Lampiran B KAK, nominal Rp ${item.requestedAmount.toLocaleString('id-ID')} memerlukan persetujuan ${approverLevel}. Klik untuk pindah ke peran tersebut.`}
+                              className="px-2.5 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold inline-flex items-center gap-1"
                             >
                               <Lock className="w-3.5 h-3.5" />
-                              <span>Kewenangan {approverLevel}</span>
-                            </span>
+                              <span>Pindah ke {approverLevel}</span>
+                            </button>
                           )
                         )}
 
@@ -905,7 +959,11 @@ export const SeleksiProposalView: React.FC = () => {
                     min={0}
                     max={100}
                     value={scoresMap[crit.key] ?? 80}
-                    onChange={(e) => setScoresMap({ ...scoresMap, [crit.key]: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      const clamped = Number.isNaN(raw) ? 0 : Math.min(100, Math.max(0, raw));
+                      setScoresMap({ ...scoresMap, [crit.key]: clamped });
+                    }}
                     className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-center font-bold bg-white"
                   />
                 </div>

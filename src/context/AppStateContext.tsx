@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
+  NavView,
   UserRole,
   AppSnapshot,
   SnapshotMeta,
@@ -53,6 +54,7 @@ import {
 } from '../data/mockData';
 
 import {
+  ActiveJourney,
   getRkapApprovalPermission,
   canRoleApproveByAuthority,
   getCharityActionPermission
@@ -60,6 +62,8 @@ import {
 
 const LOCAL_STORAGE_KEY = 'timah_csr_snapshot_json_v1';
 const ROLE_STORAGE_KEY = 'timah_csr_active_role_v1';
+const JOURNEY_STORAGE_KEY = 'timah_csr_active_journey_v1';
+const VALID_JOURNEYS: ActiveJourney[] = ['proposal', 'rkap', 'pumk'];
 const VALID_ROLES: UserRole[] = [
   'direksi',
   'kadiv',
@@ -80,12 +84,26 @@ interface ToastNotification {
   type: 'success' | 'info' | 'warning';
 }
 
+export interface FlowHandoff {
+  id: string;
+  title: string;
+  description: string;
+  targetView: NavView;
+  targetLabel: string;
+  suggestedRole?: UserRole;
+  suggestedRoleLabel?: string;
+}
+
 interface AppStateContextValue {
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
+  activeJourney: ActiveJourney;
+  setActiveJourney: (journey: ActiveJourney) => void;
   toast: ToastNotification | null;
   showToast: (message: string, type?: 'success' | 'info' | 'warning') => void;
   clearToast: () => void;
+  lastFlowHandoff: FlowHandoff | null;
+  clearFlowHandoff: () => void;
 
   // Snapshot metadata & controls
   snapshot: AppSnapshot;
@@ -310,7 +328,28 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // ignore storage errors
     }
   };
+
+  const [activeJourney, setActiveJourneyState] = useState<ActiveJourney>(() => {
+    try {
+      const saved = localStorage.getItem(JOURNEY_STORAGE_KEY) as ActiveJourney | null;
+      if (saved && VALID_JOURNEYS.includes(saved)) return saved;
+    } catch {
+      // ignore storage errors
+    }
+    return 'proposal';
+  });
+
+  const setActiveJourney = (nextJourney: ActiveJourney) => {
+    setActiveJourneyState(nextJourney);
+    try {
+      localStorage.setItem(JOURNEY_STORAGE_KEY, nextJourney);
+    } catch {
+      // ignore storage errors
+    }
+  };
   const [toast, setToast] = useState<ToastNotification | null>(null);
+  const [lastFlowHandoff, setLastFlowHandoff] = useState<FlowHandoff | null>(null);
+  const clearFlowHandoff = () => setLastFlowHandoff(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading');
   const [snapshot, setSnapshot] = useState<AppSnapshot>(() => {
     try {
@@ -392,8 +431,10 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setSnapshot((curr) => ({ ...curr, meta: payload.meta }));
         }
         setSyncStatus('saved');
-      } catch {
+      } catch (err) {
+        console.error('Gagal menyimpan snapshot.json ke server:', err);
         setSyncStatus('local-fallback');
+        showToast('Perubahan disimpan di browser lokal, gagal sinkron ke /api/snapshot server.', 'warning');
       }
     });
   };
@@ -589,12 +630,24 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       { module: 'Implementasi PPM', action: `Turunkan RKAP menjadi Proyek SPK (${spkNo})`, objectRef: rkap.code }
     );
     showToast(`RKAP ${rkap.code} diturunkan ke Implementasi (${spkNo}) & snapshot JSON diperbarui.`);
+    setLastFlowHandoff({
+      id: String(Date.now()),
+      title: `RKAP ${rkap.code} berhasil diturunkan ke Modul Implementasi (${spkNo})`,
+      description: 'Proyek SPK & PO SAP sudah terbentuk. Tahap berikutnya: verifikasi termin lapangan dan tutup BAST.',
+      targetView: 'implementasi',
+      targetLabel: 'Buka Modul Implementasi',
+      suggestedRole: 'implementasi',
+      suggestedRoleLabel: 'Bidang Implementasi'
+    });
   };
 
   // --- Portal & Module 2d: Selection ---
   const submitProposal: AppStateContextValue['submitProposal'] = (input) => {
-    const existingSbr = snapshotRef.current.sbrDatabase.find((b) => b.nik === input.nik.trim());
-    const hasRecentAid = existingSbr?.programHistory.some((h) => h.year >= 2025);
+    const cleanNik = input.nik.replace(/\D/g, '').trim();
+    const existingSbr = snapshotRef.current.sbrDatabase.find((b) => b.nik === cleanNik);
+    const hasRecentAid = existingSbr?.programHistory.some(
+      (h) => h.year >= 2025 && !h.status.toLowerCase().includes('ditolak')
+    );
     const isBlacklisted = existingSbr?.isBlacklisted;
 
     const sbrStatus: ProposalItem['sbrStatus'] = isBlacklisted
@@ -609,6 +662,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const ticketNo = `PROP-2026-${String(snapshotRef.current.proposals.length + 108)}`;
     const newProposal: ProposalItem = {
       ...input,
+      nik: cleanNik,
       id: `prop-${Date.now()}`,
       ticketNo,
       sbrStatus,
@@ -625,15 +679,38 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     commitMutation(
-      (prev) => ({ ...prev, proposals: [newProposal, ...prev.proposals] }),
-      { module: 'Seleksi Proposal', action: `Intake proposal baru via ${input.channel} (SBR: ${sbrStatus})`, objectRef: ticketNo }
+      (prev) => ({
+        ...prev,
+        proposals: [newProposal, ...prev.proposals],
+        sbrDatabase: upsertSbrList(prev.sbrDatabase, cleanNik, input.applicant, input.location, input.ring, {
+          year: 2026,
+          programName: `${input.category} (${ticketNo})`,
+          type: input.programType,
+          amount: input.requestedAmount,
+          status: knockOut ? `Ditolak (${sbrStatus})` : 'Pengajuan Proposal (Menunggu Seleksi)'
+        })
+      }),
+      { module: 'Seleksi Proposal', action: `Intake proposal baru via ${input.channel} & registrasi SBR (${sbrStatus})`, objectRef: ticketNo }
     );
     showToast(
       knockOut
-        ? `Proposal ${ticketNo} tersimpan ke snapshot dengan peringatan SBR (${sbrStatus}).`
-        : `Proposal ${ticketNo} diregistrasi & disimpan ke data/snapshot.json.`,
+        ? `Proposal ${ticketNo} tersimpan ke data/snapshot.json & SBR dengan peringatan (${sbrStatus}).`
+        : `Proposal ${ticketNo} diregistrasi & NIK tercatat di SBR (data/snapshot.json).`,
       knockOut ? 'warning' : 'success'
     );
+    setLastFlowHandoff({
+      id: String(Date.now()),
+      title: knockOut
+        ? `Proposal ${ticketNo} terdeteksi ${sbrStatus} saat screening SBR otomatis`
+        : `Proposal ${ticketNo} (${input.applicant}) berhasil diregistrasi & masuk antrean Seleksi!`,
+      description: knockOut
+        ? 'Proposal otomatis masuk daftar Ditolak / Knock-out di Seleksi Proposal dan tercatat di SBR.'
+        : 'NIK pemohon sudah tercatat di SBR. Tahap berikutnya: Bidang Implementasi / Kadiv melakukan Scoring Rubrik di Seleksi Proposal.',
+      targetView: 'seleksi',
+      targetLabel: 'Buka Seleksi Proposal',
+      suggestedRole: 'implementasi',
+      suggestedRoleLabel: 'Bidang Implementasi'
+    });
     return newProposal;
   };
 
@@ -668,6 +745,17 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       { module: 'Seleksi Proposal', action: `Input skoring rubrik terbobot (Skor: ${totalScore.toFixed(1)})`, objectRef: prop?.ticketNo || proposalId }
     );
     showToast(`Skor penilaian (${totalScore.toFixed(1)}) tersimpan ke data/snapshot.json.`);
+    if (prop) {
+      setLastFlowHandoff({
+        id: String(Date.now()),
+        title: `Skor ${prop.ticketNo} tersimpan (${totalScore.toFixed(1)} / 100)`,
+        description: 'Tahap berikutnya: Keputusan Rapat Komite Seleksi oleh Kepala Divisi CSR atau Direksi.',
+        targetView: 'seleksi',
+        targetLabel: 'Tetap di Seleksi Proposal',
+        suggestedRole: userRole === 'kadiv' || userRole === 'direksi' ? undefined : 'kadiv',
+        suggestedRoleLabel: 'Kepala Divisi CSR'
+      });
+    }
   };
 
   const decideProposalCommittee = (proposalId: string, decision: ProposalItem['committeeDecision']) => {
@@ -684,39 +772,32 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       { module: 'Komite Seleksi', action: `Keputusan forum komite: ${decision}`, objectRef: prop?.ticketNo || proposalId }
     );
     showToast(`Keputusan Komite (${decision}) tersimpan ke data/snapshot.json.`);
-  };
-
-  const approveProposalFinal = (proposalId: string) => {
-    const prop = snapshotRef.current.proposals.find((p) => p.id === proposalId);
-    if (!prop) return;
-    const approver = getApproverByAmount(prop.requestedAmount);
-    if (!canRoleApproveByAuthority(userRole, approver)) {
-      showToast(
-        `Akses ditolak (Lampiran B KAK): Nilai Rp ${prop.requestedAmount.toLocaleString('id-ID')} memerlukan persetujuan ${approver}.`,
-        'warning'
-      );
-      return;
+    if (prop && decision !== 'Ditolak') {
+      const reqApprover = getApproverByAmount(prop.requestedAmount);
+      const reqRole: UserRole =
+        reqApprover === 'Direksi / Komite'
+          ? 'direksi'
+          : reqApprover === 'Kepala Divisi'
+          ? 'kadiv'
+          : 'implementasi';
+      setLastFlowHandoff({
+        id: String(Date.now()),
+        title: `Komite menyetujui ${prop.ticketNo} — Menunggu Approval Akhir (${reqApprover})`,
+        description: `Sesuai Lampiran B KAK (Rp ${prop.requestedAmount.toLocaleString('id-ID')}), klik tombol Approve oleh ${reqApprover}. Setelah Approve, proposal otomatis terbit ke /implementasi.`,
+        targetView: 'seleksi',
+        targetLabel: 'Lanjutkan Approval',
+        suggestedRole: canRoleApproveByAuthority(userRole, reqApprover) ? undefined : reqRole,
+        suggestedRoleLabel: reqApprover
+      });
     }
-    commitMutation(
-      (prev) => ({
-        ...prev,
-        proposals: prev.proposals.map((p) =>
-          p.id === proposalId
-            ? { ...p, approvalStatus: 'Disetujui', committeeDecision: p.committeeDecision === 'Belum Rapat' ? 'Disetujui Komite' : p.committeeDecision }
-            : p
-        )
-      }),
-      { module: 'Persetujuan Proposal', action: `Persetujuan e-Sign sesuai matriks (${approver})`, objectRef: prop.ticketNo }
-    );
-    showToast(`Proposal ${prop.ticketNo} disetujui (${approver}) & tersimpan di snapshot JSON.`);
   };
 
-  const convertProposalToExecution = (proposalId: string) => {
-    const prop = snapshotRef.current.proposals.find((p) => p.id === proposalId);
-    if (!prop || prop.convertedToImpl) return;
-
+  const createExecutionStateForProposal = (
+    prev: AppSnapshot,
+    prop: ProposalItem
+  ): { nextSnap: AppSnapshot; refCode: string; targetModule: string } => {
     if (prop.programType === 'Bantuan Charity') {
-      const ticketNo = `CHR-2026-${String(snapshotRef.current.charities.length + 1).padStart(3, '0')}`;
+      const ticketNo = `CHR-2026-${String(prev.charities.length + 1).padStart(3, '0')}`;
       const newCharity: CharityItem = {
         id: `ch-${Date.now()}`,
         ticketNo,
@@ -736,69 +817,160 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         disbursementStatus: 'Menunggu Persetujuan',
         dateSubmitted: '27 Nov 2026'
       };
-      commitMutation(
-        (prev) => ({
+      return {
+        refCode: ticketNo,
+        targetModule: 'Implementasi Charity',
+        nextSnap: {
           ...prev,
           charities: [newCharity, ...prev.charities],
-          proposals: prev.proposals.map((p) => (p.id === proposalId ? { ...p, convertedToImpl: true } : p)),
+          proposals: prev.proposals.map((p) =>
+            p.id === prop.id
+              ? {
+                  ...p,
+                  approvalStatus: 'Disetujui',
+                  committeeDecision: p.committeeDecision === 'Belum Rapat' ? 'Disetujui Komite' : p.committeeDecision,
+                  convertedToImpl: true
+                }
+              : p
+          ),
           sbrDatabase: upsertSbrList(prev.sbrDatabase, prop.nik, prop.applicant, prop.location, prop.ring, {
             year: 2026,
-            programName: prop.category,
+            programName: `${prop.category} (${ticketNo})`,
             type: prop.programType,
             amount: prop.requestedAmount,
-            status: 'Disetujui & Berjalan'
+            status: 'Disetujui & Aktif di Implementasi'
           })
-        }),
-        { module: 'Implementasi Charity', action: `Konversi proposal ke tiket Bantuan Charity (${ticketNo})`, objectRef: prop.ticketNo }
-      );
-      showToast(`Proposal ${prop.ticketNo} dikonversi ke Charity (${ticketNo}) & tersimpan ke snapshot JSON.`);
-    } else {
-      const spkNo = `SPK/CSR/2026/${String(snapshotRef.current.projects.length + 1).padStart(3, '0')}`;
-      const newProject: ProjectItem = {
-        id: `prj-${Date.now()}`,
-        spkNo,
-        sourceProposalTicket: prop.ticketNo,
-        title: `${prop.category} — ${prop.applicant}`,
-        partner: prop.applicant,
-        pillar: 'Ekonomi',
-        location: prop.location,
-        geotagCoord: prop.geotagCoord || '-2.1316, 106.1169',
-        contractValue: prop.requestedAmount,
-        realizedValue: 0,
-        currentTerm: 'Termin 1 (Persiapan SPK)',
-        sapPoNo: `450089${String(500 + snapshotRef.current.projects.length)}`,
-        sapStatus: 'Pending Approval',
-        geotagPhotos: 1,
-        qrAttendanceCount: 0,
-        progressPercent: 15,
-        ragStatus: 'Hijau',
-        changeRequests: 0,
-        lpjStatus: 'Belum',
-        bastSigned: false,
-        exitStrategy: 'Pendampingan kelompok selama 12 bulan menuju kemandirian operasional',
-        milestones: [
-          { id: 'm1', name: 'Penerbitan SPK & Verifikasi Rekening', targetDate: '10 Des 2026', weightPercent: 30, status: 'Selesai' },
-          { id: 'm2', name: 'Realisasi Fisik & Pendampingan Lapangan', targetDate: '20 Jan 2027', weightPercent: 50, status: 'Berjalan' },
-          { id: 'm3', name: 'LPJ & Serah Terima BAST', targetDate: '15 Feb 2027', weightPercent: 20, status: 'Tertunda' }
-        ]
+        }
       };
+    }
+
+    const spkNo = `SPK/CSR/2026/${String(prev.projects.length + 1).padStart(3, '0')}`;
+    const newProject: ProjectItem = {
+      id: `prj-${Date.now()}`,
+      spkNo,
+      sourceProposalTicket: prop.ticketNo,
+      title: `${prop.category} — ${prop.applicant}`,
+      partner: prop.applicant,
+      pillar: 'Ekonomi',
+      location: prop.location,
+      geotagCoord: prop.geotagCoord || '-2.1316, 106.1169',
+      contractValue: prop.requestedAmount,
+      realizedValue: 0,
+      currentTerm: 'Termin 1 (Persiapan SPK)',
+      sapPoNo: `450089${String(500 + prev.projects.length)}`,
+      sapStatus: 'Pending Approval',
+      geotagPhotos: 1,
+      qrAttendanceCount: 0,
+      progressPercent: 15,
+      ragStatus: 'Hijau',
+      changeRequests: 0,
+      lpjStatus: 'Belum',
+      bastSigned: false,
+      exitStrategy: 'Pendampingan kelompok selama 12 bulan menuju kemandirian operasional',
+      milestones: [
+        { id: 'm1', name: 'Penerbitan SPK & Verifikasi Rekening', targetDate: '10 Des 2026', weightPercent: 30, status: 'Selesai' },
+        { id: 'm2', name: 'Realisasi Fisik & Pendampingan Lapangan', targetDate: '20 Jan 2027', weightPercent: 50, status: 'Berjalan' },
+        { id: 'm3', name: 'LPJ & Serah Terima BAST', targetDate: '15 Feb 2027', weightPercent: 20, status: 'Tertunda' }
+      ]
+    };
+    return {
+      refCode: spkNo,
+      targetModule: 'Implementasi PPM',
+      nextSnap: {
+        ...prev,
+        projects: [newProject, ...prev.projects],
+        proposals: prev.proposals.map((p) =>
+          p.id === prop.id
+            ? {
+                ...p,
+                approvalStatus: 'Disetujui',
+                committeeDecision: p.committeeDecision === 'Belum Rapat' ? 'Disetujui Komite' : p.committeeDecision,
+                convertedToImpl: true
+              }
+            : p
+        ),
+        sbrDatabase: upsertSbrList(prev.sbrDatabase, prop.nik, prop.applicant, prop.location, prop.ring, {
+          year: 2026,
+          programName: `${prop.category} (${spkNo})`,
+          type: prop.programType,
+          amount: prop.requestedAmount,
+          status: 'Disetujui & Aktif di Implementasi'
+        })
+      }
+    };
+  };
+
+  const approveProposalFinal = (proposalId: string) => {
+    const prop = snapshotRef.current.proposals.find((p) => p.id === proposalId);
+    if (!prop) return;
+    const approver = getApproverByAmount(prop.requestedAmount);
+    if (!canRoleApproveByAuthority(userRole, approver)) {
+      showToast(
+        `Akses ditolak (Lampiran B KAK): Nilai Rp ${prop.requestedAmount.toLocaleString('id-ID')} memerlukan persetujuan ${approver}.`,
+        'warning'
+      );
+      return;
+    }
+
+    if (prop.convertedToImpl) {
       commitMutation(
         (prev) => ({
           ...prev,
-          projects: [newProject, ...prev.projects],
-          proposals: prev.proposals.map((p) => (p.id === proposalId ? { ...p, convertedToImpl: true } : p)),
-          sbrDatabase: upsertSbrList(prev.sbrDatabase, prop.nik, prop.applicant, prop.location, prop.ring, {
-            year: 2026,
-            programName: prop.category,
-            type: prop.programType,
-            amount: prop.requestedAmount,
-            status: 'Disetujui & Berjalan'
-          })
+          proposals: prev.proposals.map((p) =>
+            p.id === proposalId
+              ? { ...p, approvalStatus: 'Disetujui', committeeDecision: p.committeeDecision === 'Belum Rapat' ? 'Disetujui Komite' : p.committeeDecision }
+              : p
+          )
         }),
-        { module: 'Implementasi PPM', action: `Konversi proposal ke Proyek SPK (${spkNo})`, objectRef: prop.ticketNo }
+        { module: 'Persetujuan Proposal', action: `Persetujuan e-Sign sesuai matriks (${approver})`, objectRef: prop.ticketNo }
       );
-      showToast(`Proposal ${prop.ticketNo} menjadi kontrak SPK (${spkNo}) & tersimpan di snapshot JSON.`);
+      showToast(`Proposal ${prop.ticketNo} disetujui (${approver}) & tersimpan di snapshot JSON.`);
+      return;
     }
+
+    let createdRef = '';
+    commitMutation(
+      (prev) => {
+        const res = createExecutionStateForProposal(prev, prop);
+        createdRef = res.refCode;
+        return res.nextSnap;
+      },
+      {
+        module: 'Persetujuan Proposal',
+        action: `Persetujuan e-Sign (${approver}) & otomatis masuk Implementasi`,
+        objectRef: prop.ticketNo
+      }
+    );
+    showToast(
+      `Proposal ${prop.ticketNo} disetujui (${approver}) & otomatis masuk ke /implementasi (${createdRef})!`
+    );
+    setLastFlowHandoff({
+      id: String(Date.now()),
+      title: `Proposal ${prop.ticketNo} disetujui & otomatis masuk Modul Implementasi (${createdRef})!`,
+      description: `Data berpindah dari antrean "Menunggu" ke kartu "Disetujui" dan langsung tampil di baris teratas /implementasi (${prop.programType === 'Bantuan Charity' ? 'Tab Charity' : 'Tab Program PPM'}).`,
+      targetView: 'implementasi',
+      targetLabel: 'Buka di Modul Implementasi',
+      suggestedRole: userRole === 'implementasi' || userRole === 'kadiv' ? undefined : 'implementasi',
+      suggestedRoleLabel: 'Bidang Implementasi'
+    });
+  };
+
+  const convertProposalToExecution = (proposalId: string) => {
+    const prop = snapshotRef.current.proposals.find((p) => p.id === proposalId);
+    if (!prop || prop.convertedToImpl) return;
+
+    let createdRef = '';
+    let targetModule = 'Implementasi PPM';
+    commitMutation(
+      (prev) => {
+        const res = createExecutionStateForProposal(prev, prop);
+        createdRef = res.refCode;
+        targetModule = res.targetModule;
+        return res.nextSnap;
+      },
+      { module: targetModule, action: `Konversi proposal ke Implementasi (${createdRef || prop.ticketNo})`, objectRef: prop.ticketNo }
+    );
+    showToast(`Proposal ${prop.ticketNo} masuk ke /implementasi (${createdRef}) & tersimpan ke snapshot JSON.`);
   };
 
   // --- Module 2a/2b: Implementation & Charity ---
@@ -860,6 +1032,13 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       { module: 'Implementasi & Aset', action: `Penutupan LPJ, BAST e-Sign (${bastNo}) & registrasi Aset`, objectRef: prj.spkNo }
     );
     showToast(`BAST ${bastNo} selesai & aset otomatis tersimpan di data/snapshot.json.`);
+    setLastFlowHandoff({
+      id: String(Date.now()),
+      title: `LPJ & BAST ${bastNo} selesai — Aset Otomatis Tercatat!`,
+      description: `Aset hasil program (${newAsset.assetCode}) otomatis didaftarkan ke Registry Aset di /registry-sbr untuk pemeliharaan berkala & Monev.`,
+      targetView: 'sbr',
+      targetLabel: 'Lihat Aset di Registry SBR'
+    });
   };
 
   const addCharityItem: AppStateContextValue['addCharityItem'] = (input) => {
@@ -885,10 +1064,20 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       dateSubmitted: '27 Nov 2026'
     };
     commitMutation(
-      (prev) => ({ ...prev, charities: [newCharity, ...prev.charities] }),
-      { module: 'Bantuan Charity', action: `Registrasi tiket bantuan (${input.isFastTrack ? 'Fast-Track Darurat' : 'Reguler'})`, objectRef: ticketNo }
+      (prev) => ({
+        ...prev,
+        charities: [newCharity, ...prev.charities],
+        sbrDatabase: upsertSbrList(prev.sbrDatabase, input.nik.replace(/\D/g, '').trim(), input.applicant, input.location, 'Ring 1', {
+          year: 2026,
+          programName: `Bantuan Charity ${input.category} (${ticketNo})`,
+          type: 'Charity TJSL',
+          amount: input.requestedAmount,
+          status: input.isFastTrack ? 'Fast-Track (Menunggu Persetujuan)' : 'Pengajuan Charity (Verifikasi)'
+        })
+      }),
+      { module: 'Bantuan Charity', action: `Registrasi tiket bantuan & SBR (${input.isFastTrack ? 'Fast-Track Darurat' : 'Reguler'})`, objectRef: ticketNo }
     );
-    showToast(`Tiket Bantuan Charity ${ticketNo} tersimpan ke data/snapshot.json.`);
+    showToast(`Tiket Bantuan Charity ${ticketNo} & profil SBR tersimpan ke data/snapshot.json.`);
     return newCharity;
   };
 
@@ -969,10 +1158,20 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       status: 'Onboarding'
     };
     commitMutation(
-      (prev) => ({ ...prev, pumkApplications: [newApp, ...prev.pumkApplications] }),
-      { module: 'Koperasi & PUMK', action: `Onboarding permohonan pembiayaan baru (Skor 5C: ${input.creditScore})`, objectRef: regNo }
+      (prev) => ({
+        ...prev,
+        pumkApplications: [newApp, ...prev.pumkApplications],
+        sbrDatabase: upsertSbrList(prev.sbrDatabase, input.nik.replace(/\D/g, '').trim(), input.businessName, input.location, 'Ring 1', {
+          year: 2026,
+          programName: `Onboarding PUMK ${input.businessType} (${regNo})`,
+          type: 'Pendanaan PUMK',
+          amount: input.requestedPlafon,
+          status: 'Pengajuan PUMK (Onboarding 5C)'
+        })
+      }),
+      { module: 'Koperasi & PUMK', action: `Onboarding permohonan pembiayaan baru & SBR (Skor 5C: ${input.creditScore})`, objectRef: regNo }
     );
-    showToast(`Permohonan PUMK ${regNo} tersimpan ke data/snapshot.json.`);
+    showToast(`Permohonan PUMK ${regNo} & profil SBR tersimpan ke data/snapshot.json.`);
     return newApp;
   };
 
@@ -1183,6 +1382,15 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       true
     );
     showToast(`Rekomendasi Monev menjadi Draft RKAP ${code} & tersimpan di data/snapshot.json!`);
+    setLastFlowHandoff({
+      id: String(Date.now()),
+      title: `Closed-Loop Aktif: Draft RKAP ${code} terbentuk dari Evaluasi Monev!`,
+      description: 'Siklus berputar kembali ke Modul Perencanaan & RKAP untuk review berjenjang tahun anggaran berikutnya.',
+      targetView: 'perencanaan',
+      targetLabel: 'Buka Perencanaan & RKAP',
+      suggestedRole: userRole === 'perencanaan' || userRole === 'kadiv' ? undefined : 'perencanaan',
+      suggestedRoleLabel: 'Bidang Perencanaan'
+    });
   };
 
   // --- Supporting Modules ---
@@ -1260,9 +1468,13 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         userRole,
         setUserRole,
+        activeJourney,
+        setActiveJourney,
         toast,
         showToast,
         clearToast,
+        lastFlowHandoff,
+        clearFlowHandoff,
         snapshot,
         snapshotMeta: snapshot.meta,
         syncStatus,

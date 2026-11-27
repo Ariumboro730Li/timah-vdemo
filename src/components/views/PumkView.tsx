@@ -1162,7 +1162,11 @@ export const PumkView: React.FC = () => {
                     min={0}
                     max={100}
                     value={fiveC[k]}
-                    onChange={(e) => setFiveC({ ...fiveC, [k]: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      const clamped = Number.isNaN(raw) ? 0 : Math.min(100, Math.max(0, raw));
+                      setFiveC({ ...fiveC, [k]: clamped });
+                    }}
                     className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-center font-bold"
                   />
                 </div>
