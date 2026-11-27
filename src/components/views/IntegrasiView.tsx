@@ -1,17 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { ScoringRubricCriterion, AppSnapshot, AuditLog } from '../../types';
-import { RefreshCw, Download, Sliders, ShieldCheck, Save, Database, Upload, RotateCcw, Eye } from 'lucide-react';
+import { ScoringRubricCriterion, AppSnapshot, AuditLog, UserRole } from '../../types';
+import { RefreshCw, Download, Sliders, ShieldCheck, Save, Database, Upload, RotateCcw, Eye, Users, Lock, EyeOff } from 'lucide-react';
 import { useAppState } from '../../context/AppStateContext';
 import { exportRowsToExcel } from '../../utils/dataImportExport';
 import { PaginationBar } from '../common/PaginationBar';
 import { Modal } from '../common/Modal';
+import { getRolePolicy, ALL_ROLES_ORDER, ROLE_POLICIES, VIEW_LABELS } from '../../utils/rbac';
 
 interface IntegrasiViewProps {
-  initialTab?: 'integrasi' | 'config' | 'audit' | 'snapshot';
+  initialTab?: 'integrasi' | 'config' | 'rbac' | 'audit' | 'snapshot';
+  onTabChange?: (tab: 'integrasi' | 'config' | 'rbac' | 'audit' | 'snapshot') => void;
 }
 
-export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'integrasi' }) => {
+export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'integrasi', onTabChange }) => {
   const {
+    userRole,
     snapshot,
     snapshotMeta,
     syncStatus,
@@ -24,17 +27,25 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
     resetSnapshotToSeed,
     showToast
   } = useAppState();
+  const policy = getRolePolicy(userRole);
 
-  const [activeTab, setActiveTab] = useState<'integrasi' | 'config' | 'audit' | 'snapshot'>(initialTab);
+  const [activeTab, setActiveTabState] = useState<'integrasi' | 'config' | 'rbac' | 'audit' | 'snapshot'>(initialTab);
+  const setActiveTab = (tab: 'integrasi' | 'config' | 'rbac' | 'audit' | 'snapshot') => {
+    setActiveTabState(tab);
+    onTabChange?.(tab);
+  };
   const [draftRubric, setDraftRubric] = useState<ScoringRubricCriterion[]>(scoringRubric);
   const [auditPage, setAuditPage] = useState(1);
   const [auditPageSize, setAuditPageSize] = useState(5);
+  const [rbacPage, setRbacPage] = useState(1);
+  const [rbacPageSize, setRbacPageSize] = useState(5);
   const [selectedAuditLog, setSelectedAuditLog] = useState<AuditLog | null>(null);
+  const [selectedRbacRole, setSelectedRbacRole] = useState<UserRole | null>(null);
   const [previewCollection, setPreviewCollection] = useState<keyof AppSnapshot>('rkapList');
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    setActiveTab(initialTab);
+    setActiveTabState(initialTab);
   }, [initialTab]);
 
   React.useEffect(() => {
@@ -137,6 +148,15 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
             <span>Konfigurasi Rubrik & Matriks</span>
           </button>
           <button
+            onClick={() => setActiveTab('rbac')}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5 ${
+              activeTab === 'rbac' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Matriks RBAC & Privasi ({ALL_ROLES_ORDER.length} Peran)</span>
+          </button>
+          <button
             onClick={() => setActiveTab('audit')}
             className={`px-4 py-2 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5 ${
               activeTab === 'audit' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
@@ -150,13 +170,14 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
             className={`px-4 py-2 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5 ${
               activeTab === 'snapshot' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
+            title={`Snapshot JSON (Rev #${snapshotMeta.revision})`}
           >
             <Database className="w-4 h-4" />
-            <span>Snapshot JSON (Rev #{snapshotMeta.revision})</span>
+            {/* <span>Snapshot JSON (Rev #{snapshotMeta.revision})</span> */}
           </button>
         </div>
 
-        {activeTab === 'audit' && (
+        {activeTab === 'audit' && policy.canExportAudit && (
           <button
             onClick={handleExportAudit}
             className="px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold inline-flex items-center gap-1.5"
@@ -223,13 +244,20 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
                 >
                   Total Bobot: {totalRubricWeight}%
                 </span>
-                <button
-                  onClick={handleSaveRubric}
-                  className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Simpan Rubrik</span>
-                </button>
+                {policy.canManageConfig ? (
+                  <button
+                    onClick={handleSaveRubric}
+                    className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Rubrik</span>
+                  </button>
+                ) : (
+                  <span className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-semibold inline-flex items-center gap-1.5">
+                    <Lock className="w-4 h-4" />
+                    <span>Read-Only (Edit oleh System Admin / Kadiv)</span>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -247,13 +275,14 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
                       type="number"
                       min={0}
                       max={100}
+                      disabled={!policy.canManageConfig}
                       value={crit.weight}
                       onChange={(e) => {
                         const updated = [...draftRubric];
                         updated[idx] = { ...crit, weight: Number(e.target.value) };
                         setDraftRubric(updated);
                       }}
-                      className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-center font-bold"
+                      className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-center font-bold disabled:bg-slate-100 disabled:text-slate-500"
                     />
                     <span className="font-bold text-slate-500">%</span>
                   </div>
@@ -285,6 +314,99 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 2B: RBAC MATRIX & UU PDP PRIVACY POLICY */}
+      {activeTab === 'rbac' && (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-slate-900">Matriks Hak Akses RBAC, Kewenangan Persetujuan & Masking UU PDP (KAK Bab 10, 12 & Lampiran B)</h3>
+              <p className="text-slate-500">
+                Pembatasan menu ketat (Opsi 1), validasi persetujuan berjenjang RKAP/nominal, serta masking otomatis NIK/rekening sesuai UU No. 27/2022.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-900 font-semibold">
+              Peran Aktif: {policy.label}
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold">
+                  <th className="py-3 px-4">Peran Pengguna</th>
+                  <th className="py-3 px-4">Menu Aktif (Strict)</th>
+                  <th className="py-3 px-4">Privasi Data (UU PDP)</th>
+                  <th className="py-3 px-4">Ringkasan Kewenangan RACI</th>
+                  <th className="py-3 px-4 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {ALL_ROLES_ORDER.slice((rbacPage - 1) * rbacPageSize, rbacPage * rbacPageSize).map((r) => {
+                  const rp = ROLE_POLICIES[r];
+                  return (
+                    <tr key={r} className={`hover:bg-slate-50/70 ${r === userRole ? 'bg-sky-50/40' : ''}`}>
+                      <td className="py-3 px-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRbacRole(r)}
+                          className="font-bold text-slate-900 hover:text-sky-700 hover:underline text-left"
+                        >
+                          {rp.label}
+                        </button>
+                        <div className="text-slate-500">{rp.subtitle}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-sky-800">{rp.allowedViews.length} / 11 Menu</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {rp.allowedViews.slice(0, 4).map((v) => (
+                            <span key={v} className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                              {VIEW_LABELS[v]}
+                            </span>
+                          ))}
+                          {rp.allowedViews.length > 4 && (
+                            <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-800 font-semibold">
+                              +{rp.allowedViews.length - 4} lainnya
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {rp.canViewUnmaskedPii ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                            <ShieldCheck className="w-4 h-4" /> e-KYC / PII Penuh
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
+                            <EyeOff className="w-4 h-4" /> Masking NIK & Rek
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-700 max-w-md">{rp.scopeSummary}</td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRbacRole(r)}
+                          className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-semibold inline-flex items-center gap-1.5"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Detail</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <PaginationBar
+            totalItems={ALL_ROLES_ORDER.length}
+            currentPage={rbacPage}
+            pageSize={rbacPageSize}
+            onPageChange={setRbacPage}
+            onPageSizeChange={setRbacPageSize}
+          />
         </div>
       )}
 
@@ -379,20 +501,29 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
                 <Download className="w-4 h-4" />
                 <span>Unduh snapshot.json</span>
               </button>
-              <button
-                onClick={() => restoreInputRef.current?.click()}
-                className="px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold inline-flex items-center gap-1.5"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Restore JSON</span>
-              </button>
-              <button
-                onClick={resetSnapshotToSeed}
-                className="px-3.5 py-2 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold inline-flex items-center gap-1.5"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Reset ke Seed Awal</span>
-              </button>
+              {policy.canManageSnapshot ? (
+                <>
+                  <button
+                    onClick={() => restoreInputRef.current?.click()}
+                    className="px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold inline-flex items-center gap-1.5"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Restore JSON</span>
+                  </button>
+                  <button
+                    onClick={resetSnapshotToSeed}
+                    className="px-3.5 py-2 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold inline-flex items-center gap-1.5"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Reset ke Seed Awal</span>
+                  </button>
+                </>
+              ) : (
+                <span className="px-3 py-2 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-semibold inline-flex items-center gap-1.5">
+                  <Lock className="w-4 h-4" />
+                  <span>Restore & Reset khusus System Admin (TI)</span>
+                </span>
+              )}
             </div>
           </div>
 
@@ -435,6 +566,90 @@ export const IntegrasiView: React.FC<IntegrasiViewProps> = ({ initialTab = 'inte
           </div>
         </div>
       )}
+
+      {/* Modal: Detail Peran RBAC */}
+      <Modal
+        isOpen={Boolean(selectedRbacRole)}
+        onClose={() => setSelectedRbacRole(null)}
+        title={`Detail Hak Akses RBAC — ${selectedRbacRole ? ROLE_POLICIES[selectedRbacRole].label : ''}`}
+        maxWidth="max-w-3xl"
+        footer={
+          <button
+            onClick={() => setSelectedRbacRole(null)}
+            className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+          >
+            Tutup
+          </button>
+        }
+      >
+        {selectedRbacRole && (() => {
+          const rp = ROLE_POLICIES[selectedRbacRole];
+          const permFlags = [
+            { label: 'Usulkan & Draft RKAP', ok: rp.canCreateRkap },
+            { label: 'Turunkan RKAP ke Proyek PPM', ok: rp.canConvertRkap },
+            { label: 'Scoring Proposal Multi-Reviewer', ok: rp.canScoreProposal },
+            { label: 'Keputusan Forum Komite Seleksi', ok: rp.canCommitteeDecide },
+            { label: 'Verifikasi Output PPM & Tutup BAST', ok: rp.canManagePpm },
+            { label: 'Registrasi & Verifikasi Bantuan Charity', ok: rp.canCreateCharity || rp.canVerifyCharity },
+            { label: 'Skoring Kinerja Flagship (KAK 8.2)', ok: rp.canScoreFlagship },
+            { label: 'Kelola Portofolio & VA Pinjaman PUMK', ok: rp.canManagePumkLoan },
+            { label: 'Kelola Action Tracker & Grievance Monev', ok: rp.canManageMonevIssues },
+            { label: 'Konversi Closed-Loop Lessons ke RKAP', ok: rp.canApplyClosedLoop },
+            { label: 'Kelola Blacklist SBR / Mitra Pelaksana', ok: rp.canToggleSbrBlacklist || rp.canTogglePartnerBlacklist },
+            { label: 'Ubah Konfigurasi Rubrik & Aturan No-Code', ok: rp.canManageConfig },
+            { label: 'Restore / Reset Snapshot JSON', ok: rp.canManageSnapshot },
+            { label: 'Ekspor Bukti Audit Trail SPI', ok: rp.canExportAudit }
+          ];
+          return (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-base font-bold text-slate-900">{rp.label}</div>
+                  <span
+                    className={`px-2.5 py-0.5 rounded font-semibold border ${
+                      rp.canViewUnmaskedPii
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    {rp.canViewUnmaskedPii ? 'Akses PII / e-KYC Penuh' : 'Masking UU PDP Aktif'}
+                  </span>
+                </div>
+                <div className="text-slate-600">{rp.dashboardLevel}</div>
+                <p className="text-slate-800 pt-1">{rp.scopeSummary}</p>
+              </div>
+
+              <div>
+                <div className="font-bold text-slate-900 mb-2">Daftar Menu Sidebar Diizinkan ({rp.allowedViews.length} / 11):</div>
+                <div className="flex flex-wrap gap-2">
+                  {rp.allowedViews.map((v) => (
+                    <span key={v} className="px-3 py-1 rounded-lg bg-sky-50 text-sky-900 border border-sky-200 font-semibold">
+                      {VIEW_LABELS[v]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="font-bold text-slate-900 mb-2">Matriks Izin Fitur & Pemisahan Tugas (Segregation of Duties):</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {permFlags.map((pf) => (
+                    <div
+                      key={pf.label}
+                      className={`p-2.5 rounded-lg border flex items-center justify-between gap-2 ${
+                        pf.ok ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' : 'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}
+                    >
+                      <span className="font-medium">{pf.label}</span>
+                      <span className="font-bold">{pf.ok ? '✓ Aktif' : '— Terkunci'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       {/* Modal: Detail Log Audit Trail */}
       <Modal

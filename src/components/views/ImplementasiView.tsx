@@ -10,14 +10,17 @@ import {
   Zap,
   QrCode,
   ShieldCheck,
-  Eye
+  Eye,
+  Lock
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { PaginationBar } from '../common/PaginationBar';
 import { useAppState } from '../../context/AppStateContext';
+import { getRolePolicy, getCharityActionPermission, maskNik, maskAccountNo } from '../../utils/rbac';
 
 export const ImplementasiView: React.FC = () => {
   const {
+    userRole,
     projects,
     charities,
     advanceProjectProgress,
@@ -25,12 +28,14 @@ export const ImplementasiView: React.FC = () => {
     addCharityItem,
     advanceCharityStatus
   } = useAppState();
+  const policy = getRolePolicy(userRole);
 
   const [activeTab, setActiveTab] = useState<'ppm' | 'charity'>('ppm');
   const [ppmPage, setPpmPage] = useState(1);
   const [ppmPageSize, setPpmPageSize] = useState(5);
   const [chPage, setChPage] = useState(1);
   const [chPageSize, setChPageSize] = useState(5);
+  const [charityCatFilter, setCharityCatFilter] = useState<'Semua' | CharityItem['category']>('Semua');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedCharityId, setSelectedCharityId] = useState<string | null>(null);
   const [isAddCharityOpen, setIsAddCharityOpen] = useState(false);
@@ -99,16 +104,18 @@ export const ImplementasiView: React.FC = () => {
           </button>
         </div>
 
-        <button
-          onClick={() => {
-            setActiveTab('charity');
-            setIsAddCharityOpen(true);
-          }}
-          className="px-3.5 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Input Bantuan Charity / Darurat</span>
-        </button>
+        {policy.canCreateCharity && (
+          <button
+            onClick={() => {
+              setActiveTab('charity');
+              setIsAddCharityOpen(true);
+            }}
+            className="px-3.5 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Input Bantuan Charity / Darurat</span>
+          </button>
+        )}
       </div>
 
       {/* TAB 1: PROGRAM PPM */}
@@ -237,25 +244,63 @@ export const ImplementasiView: React.FC = () => {
       )}
 
       {/* TAB 2: BANTUAN CHARITY / SOSIAL KEMASYARAKATAN */}
-      {activeTab === 'charity' && (
+      {activeTab === 'charity' && (() => {
+        const filteredCharities =
+          charityCatFilter === 'Semua'
+            ? charities
+            : charities.filter((c) => c.category === charityCatFilter);
+        return (
         <div className="space-y-6">
-          {/* Sub-limit Pagu per Kategori (C-03) */}
+          {/* Sub-limit Pagu per Kategori (C-03) — Interactive Filter Cards */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h3 className="font-bold text-slate-900 mb-3">Kontrol Sub-Limit Anggaran Bantuan Charity per Kategori</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h3 className="font-bold text-slate-900">Kontrol Sub-Limit Anggaran Bantuan Charity per Kategori (Klik untuk Filter)</h3>
+              {charityCatFilter !== 'Semua' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCharityCatFilter('Semua');
+                    setChPage(1);
+                  }}
+                  className="px-3 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold hover:bg-sky-100"
+                >
+                  Tampilkan Semua Kategori ({charities.length})
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {(Object.keys(subLimits) as CharityItem['category'][]).map((cat) => {
-                const used = charities.filter((c) => c.category === cat).reduce((a, b) => a + b.requestedAmount, 0);
+                const catItems = charities.filter((c) => c.category === cat);
+                const used = catItems.reduce((a, b) => a + b.requestedAmount, 0);
                 const pct = Math.min(100, Math.round((used / subLimits[cat]) * 100));
+                const isSelected = charityCatFilter === cat;
                 return (
-                  <div key={cat} className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="font-bold text-slate-800">{cat}</div>
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setCharityCatFilter((curr) => (curr === cat ? 'Semua' : cat));
+                      setChPage(1);
+                    }}
+                    className={`text-left p-3 rounded-lg border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-sky-50 border-sky-500 ring-2 ring-sky-200 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 hover:border-sky-300 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-slate-800">{cat}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold">
+                        {catItems.length}
+                      </span>
+                    </div>
                     <div className="text-slate-600 mt-0.5">
                       Rp {(used / 1000000).toFixed(1)} Jt / Rp {subLimits[cat] / 1000000} Jt
                     </div>
                     <div className="w-full h-2 bg-slate-200 rounded-full mt-2 overflow-hidden">
                       <div className="h-full bg-sky-600 rounded-full" style={{ width: `${pct}%` }}></div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -264,7 +309,24 @@ export const ImplementasiView: React.FC = () => {
           {/* Charity Table */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200">
-              <h3 className="font-bold text-slate-900">Penyaluran Bantuan TJSL / Charity & Jalur Darurat (SOP 11.2)</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-slate-900">Penyaluran Bantuan TJSL / Charity & Jalur Darurat (SOP 11.2)</h3>
+                {charityCatFilter !== 'Semua' && (
+                  <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-900 font-semibold">
+                    <span>Kategori: {charityCatFilter} ({filteredCharities.length})</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCharityCatFilter('Semua');
+                        setChPage(1);
+                      }}
+                      className="text-sky-700 hover:text-rose-700 font-bold underline"
+                    >
+                      Reset
+                    </button>
+                  </span>
+                )}
+              </div>
               <p className="text-slate-500">Dilengkapi deteksi fraud/anomali, deklarasi bebas benturan kepentingan (COI), dan pencairan langsung (direct to beneficiary)</p>
             </div>
             <div className="overflow-x-auto">
@@ -281,7 +343,7 @@ export const ImplementasiView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {charities.slice((chPage - 1) * chPageSize, chPage * chPageSize).map((c) => (
+                  {filteredCharities.slice((chPage - 1) * chPageSize, chPage * chPageSize).map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50/70">
                       <td className="py-3 px-4">
                         <button
@@ -307,8 +369,8 @@ export const ImplementasiView: React.FC = () => {
                         >
                           {c.applicant}
                         </button>
-                        <div className="font-mono text-slate-500">NIK: {c.nik}</div>
-                        <div className="text-slate-600">{c.accountNo}</div>
+                        <div className="font-mono text-slate-500">NIK: {maskNik(c.nik, userRole)}</div>
+                        <div className="text-slate-600">{maskAccountNo(c.accountNo, userRole)}</div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-semibold text-slate-800">{c.category}</div>
@@ -367,18 +429,25 @@ export const ImplementasiView: React.FC = () => {
                             <Eye className="w-4 h-4" />
                             <span>Detail</span>
                           </button>
-                          {c.disbursementStatus !== 'BAST Selesai' ? (
-                            <button
-                              onClick={() => advanceCharityStatus(c.id)}
-                              className="px-3 py-1 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
-                            >
-                              {c.disbursementStatus === 'Verifikasi'
-                                ? 'Loloskan Verifikasi'
-                                : c.disbursementStatus === 'Menunggu Persetujuan'
-                                ? 'Cairkan (Direct Bank)'
-                                : 'Selesaikan BAST'}
-                            </button>
-                          ) : (
+                          {c.disbursementStatus !== 'BAST Selesai' ? (() => {
+                            const perm = getCharityActionPermission(userRole, c);
+                            return perm.allowed ? (
+                              <button
+                                onClick={() => advanceCharityStatus(c.id)}
+                                className="px-3 py-1 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                              >
+                                {perm.actionLabel}
+                              </button>
+                            ) : (
+                              <span
+                                title={`Tahap ini memerlukan ${perm.lockedReason}`}
+                                className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-semibold inline-flex items-center gap-1"
+                              >
+                                <Lock className="w-3.5 h-3.5" />
+                                <span>{perm.lockedReason}</span>
+                              </span>
+                            );
+                          })() : (
                             <span className="text-emerald-700 font-semibold">✓ Selesai & Arsip</span>
                           )}
                         </div>
@@ -389,7 +458,7 @@ export const ImplementasiView: React.FC = () => {
               </table>
             </div>
             <PaginationBar
-              totalItems={charities.length}
+              totalItems={filteredCharities.length}
               currentPage={chPage}
               pageSize={chPageSize}
               onPageChange={setChPage}
@@ -397,7 +466,8 @@ export const ImplementasiView: React.FC = () => {
             />
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Modal: Detail & Verifikasi Proyek PPM */}
       <Modal
@@ -414,7 +484,7 @@ export const ImplementasiView: React.FC = () => {
               >
                 Tutup
               </button>
-              {selectedProject.progressPercent < 100 && (
+              {policy.canManagePpm && selectedProject.progressPercent < 100 && (
                 <button
                   onClick={() => advanceProjectProgress(selectedProject.id)}
                   className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
@@ -422,7 +492,7 @@ export const ImplementasiView: React.FC = () => {
                   Verifikasi Output & Posting Termin SAP
                 </button>
               )}
-              {!selectedProject.bastSigned && (
+              {policy.canManagePpm && !selectedProject.bastSigned && (
                 <button
                   onClick={() => completeProjectBast(selectedProject.id)}
                   className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1.5"
@@ -430,6 +500,12 @@ export const ImplementasiView: React.FC = () => {
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Tutup LPJ, BAST & Catat Aset</span>
                 </button>
+              )}
+              {!policy.canManagePpm && (
+                <span className="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 font-semibold inline-flex items-center gap-1.5">
+                  <Lock className="w-4 h-4" />
+                  <span>Mode Pantau (Read-Only)</span>
+                </span>
               )}
             </>
           )
@@ -566,18 +642,22 @@ export const ImplementasiView: React.FC = () => {
               >
                 Tutup
               </button>
-              {selectedCharity.disbursementStatus !== 'BAST Selesai' && (
-                <button
-                  onClick={() => advanceCharityStatus(selectedCharity.id)}
-                  className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
-                >
-                  {selectedCharity.disbursementStatus === 'Verifikasi'
-                    ? 'Loloskan Verifikasi'
-                    : selectedCharity.disbursementStatus === 'Menunggu Persetujuan'
-                    ? 'Cairkan (Direct Bank)'
-                    : 'Selesaikan BAST'}
-                </button>
-              )}
+              {selectedCharity.disbursementStatus !== 'BAST Selesai' && (() => {
+                const perm = getCharityActionPermission(userRole, selectedCharity);
+                return perm.allowed ? (
+                  <button
+                    onClick={() => advanceCharityStatus(selectedCharity.id)}
+                    className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                  >
+                    {perm.actionLabel}
+                  </button>
+                ) : (
+                  <span className="px-3.5 py-2 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-semibold inline-flex items-center gap-1.5">
+                    <Lock className="w-4 h-4" />
+                    <span>Terkunci — {perm.lockedReason}</span>
+                  </span>
+                );
+              })()}
             </>
           )
         }
@@ -619,12 +699,16 @@ export const ImplementasiView: React.FC = () => {
                 <div className="text-base font-bold text-slate-900">{selectedCharity.applicant}</div>
               </div>
               <div>
-                <span className="text-slate-500 font-semibold block">NIK Penanggung Jawab (SBR):</span>
-                <div className="font-mono font-bold text-slate-800">{selectedCharity.nik}</div>
+                <span className="text-slate-500 font-semibold block">
+                  NIK Penanggung Jawab (SBR) {!policy.canViewUnmaskedPii && '• Masked UU PDP'}:
+                </span>
+                <div className="font-mono font-bold text-slate-800">{maskNik(selectedCharity.nik, userRole)}</div>
               </div>
               <div>
-                <span className="text-slate-500 font-semibold block">Rekening Direct-to-Beneficiary:</span>
-                <div className="font-semibold text-slate-800">{selectedCharity.accountNo}</div>
+                <span className="text-slate-500 font-semibold block">
+                  Rekening Direct-to-Beneficiary {!policy.canViewUnmaskedPii && '• Masked'}:
+                </span>
+                <div className="font-semibold text-slate-800">{maskAccountNo(selectedCharity.accountNo, userRole)}</div>
               </div>
               <div>
                 <span className="text-slate-500 font-semibold block">Tanggal Pengajuan & No BAST:</span>

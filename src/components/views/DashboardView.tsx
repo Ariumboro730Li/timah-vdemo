@@ -17,10 +17,11 @@ import {
 import { MetricCard } from '../common/MetricCard';
 import { PaginationBar } from '../common/PaginationBar';
 import { Modal } from '../common/Modal';
-import { DollarSign, Users, Award, TrendingUp, Download, ArrowRight, CheckCircle2, AlertTriangle, MapPin, Eye, ExternalLink, Camera, QrCode } from 'lucide-react';
+import { DollarSign, Users, Award, TrendingUp, Download, ArrowRight, CheckCircle2, AlertTriangle, MapPin, Eye, ExternalLink, Camera, QrCode, BookOpen, Send } from 'lucide-react';
 import { NavView, ProjectItem } from '../../types';
 import { useAppState } from '../../context/AppStateContext';
 import { exportRowsToExcel } from '../../utils/dataImportExport';
+import { getRolePolicy, isViewAllowed } from '../../utils/rbac';
 
 interface DashboardViewProps {
   onNavigate: (view: NavView) => void;
@@ -75,14 +76,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     ? Math.round((latestMonth.realisasi / latestMonth.target) * 100)
     : 92;
 
-  const dashboardLevelLabel =
-    userRole === 'direksi' || userRole === 'kadiv'
-      ? 'Level Eksekutif (Direksi, Komite & Kepala Divisi)'
-      : userRole === 'perencanaan' || userRole === 'monev' || userRole === 'spi'
-      ? 'Level Manajerial & Pengawasan (Kabid, Monev & SPI)'
-      : userRole === 'pemohon'
-      ? 'Level Publik / Stakeholder (Data Teragregasi)'
-      : 'Level Operasional (Staf, PIC & Pengelola Lapangan)';
+  const policy = getRolePolicy(userRole);
+  const isPublic = userRole === 'pemohon';
+  const dashboardLevelLabel = policy.dashboardLevel;
 
   const handleExportSummary = () => {
     const rows = projects.map((p) => ({
@@ -106,39 +102,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="font-bold text-slate-900">{dashboardLevelLabel}</span>
-          <p className="text-sm text-slate-500">
-            Data tersinkronisasi langsung dengan RKAP, Seleksi Proposal, Implementasi SAP, Portofolio PUMK, dan SBR.
-          </p>
+          <p className="text-sm text-slate-500">{policy.scopeSummary}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={selectedPillar}
-            onChange={(e) => {
-              setSelectedPillar(e.target.value);
-              setProjPage(1);
-            }}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700 outline-none"
-          >
-            <option value="Semua">Semua Pilar TJSL</option>
-            <option value="Ekonomi">Pilar Ekonomi</option>
-            <option value="Lingkungan">Pilar Lingkungan</option>
-            <option value="Sosial">Pilar Sosial</option>
-          </select>
-          <button
-            onClick={() => onNavigate('portal')}
-            className="px-3 py-1.5 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-800 text-sm font-semibold inline-flex items-center gap-1.5"
-          >
-            <span>Lihat Alur End-to-End</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleExportSummary}
-            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold inline-flex items-center gap-1.5"
-          >
-            <Download className="w-4 h-4" />
-            <span>Ekspor Excel</span>
-          </button>
-        </div>
+        {/* <div className="flex flex-wrap items-center gap-2">
+          {!isPublic && (
+            <select
+              value={selectedPillar}
+              onChange={(e) => {
+                setSelectedPillar(e.target.value);
+                setProjPage(1);
+              }}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-700 outline-none"
+            >
+              <option value="Semua">Semua Pilar TJSL</option>
+              <option value="Ekonomi">Pilar Ekonomi</option>
+              <option value="Lingkungan">Pilar Lingkungan</option>
+              <option value="Sosial">Pilar Sosial</option>
+            </select>
+          )}
+          {isViewAllowed(userRole, 'portal') && (
+            <button
+              onClick={() => onNavigate('portal')}
+              className="px-3 py-1.5 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-800 text-sm font-semibold inline-flex items-center gap-1.5"
+            >
+              <span>{isPublic ? 'Ajukan Proposal / Lacak Tiket' : 'Lihat Alur End-to-End'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+          {policy.canExportReports && (
+            <button
+              onClick={handleExportSummary}
+              className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold inline-flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4" />
+              <span>Ekspor Excel</span>
+            </button>
+          )}
+        </div> */}
       </div>
 
       {/* KPI Cards */}
@@ -148,18 +148,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           value={`Rp ${(totalRkapBudget / 1000000000).toFixed(2)} M`}
           subtext={`${rkapList.length} Program • Realisasi Rp ${(totalRealized / 1000000000).toFixed(2)} M`}
           icon={<DollarSign className="w-4 h-4 text-sky-600" />}
+          onClick={isViewAllowed(userRole, 'perencanaan') ? () => onNavigate('perencanaan') : undefined}
         />
         <MetricCard
           label="Penerima Tervalidasi SBR"
           value={`${sbrDatabase.length} Profil`}
           subtext="✓ Validasi NIK & Zero Duplikasi Aktif"
           icon={<Users className="w-4 h-4 text-emerald-600" />}
+          onClick={isViewAllowed(userRole, 'sbr') ? () => onNavigate('sbr') : undefined}
         />
         <MetricCard
           label="Rata-rata Skor SROI"
           value={`1 : ${avgSroi}`}
           subtext={`${flagships.length} Program Flagship Multi-Tahun`}
           icon={<Award className="w-4 h-4 text-indigo-600" />}
+          onClick={isViewAllowed(userRole, 'flagship') ? () => onNavigate('flagship') : undefined}
         />
         <MetricCard
           label="Portofolio Baki PUMK"
@@ -167,43 +170,68 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           subtext={`${pumkLoans.length} Debitur • NPL >90h: ${nplRatio}%`}
           isPositive={Number(nplRatio) <= 5}
           icon={<TrendingUp className="w-4 h-4 text-amber-600" />}
+          onClick={isViewAllowed(userRole, 'pumk') ? () => onNavigate('pumk') : undefined}
         />
       </div>
 
-      {/* Operational Alert Strip */}
-      {(pendingProposals > 0 || openIssues > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-              <div>
-                <div className="font-bold text-amber-950">{pendingProposals} Proposal Menunggu Seleksi / Persetujuan</div>
-                <div className="text-sm text-amber-800">Target SLA KAK: proses seleksi turun ≥ 40% dari baseline 45 hari.</div>
+      {/* Operational Alert Strip (Internal) vs Public Portal CTA (Eksternal) */}
+      {isPublic ? (
+        <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Send className="w-5 h-5 text-sky-700 flex-shrink-0" />
+            <div>
+              <div className="font-bold text-sky-950">Layanan Mandiri Masyarakat & Mitra Binaan (KAK Bab 7.5 — Data Teragregasi & Anonim)</div>
+              <div className="text-sm text-sky-900">
+                Ajukan proposal bantuan TJSL/PPM secara online, lacak status berkas real-time, atau sampaikan aspirasi/pengaduan melalui Portal Pemohon.
               </div>
             </div>
-            <button
-              onClick={() => onNavigate('seleksi')}
-              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold flex-shrink-0"
-            >
-              Buka Seleksi
-            </button>
           </div>
-          <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-sky-700 flex-shrink-0" />
-              <div>
-                <div className="font-bold text-sky-950">{openIssues} Tiket Monev & Grievance Dalam Tindak Lanjut</div>
-                <div className="text-sm text-sky-800">Pemantauan deviasi lapangan berkoordinat Google Maps & SLA.</div>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigate('monev')}
-              className="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold flex-shrink-0"
-            >
-              Buka Monev
-            </button>
-          </div>
+          <button
+            onClick={() => onNavigate('portal')}
+            className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold flex-shrink-0"
+          >
+            Buka Portal Pemohon &rarr;
+          </button>
         </div>
+      ) : (
+        (pendingProposals > 0 || openIssues > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <div>
+                  <div className="font-bold text-amber-950">{pendingProposals} Proposal Menunggu Seleksi / Persetujuan</div>
+                  <div className="text-sm text-amber-800">Target SLA KAK: proses seleksi turun ≥ 40% dari baseline 45 hari.</div>
+                </div>
+              </div>
+              {isViewAllowed(userRole, 'seleksi') && (
+                <button
+                  onClick={() => onNavigate('seleksi')}
+                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold flex-shrink-0"
+                >
+                  Buka Seleksi
+                </button>
+              )}
+            </div>
+            <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-sky-700 flex-shrink-0" />
+                <div>
+                  <div className="font-bold text-sky-950">{openIssues} Tiket Monev & Grievance Dalam Tindak Lanjut</div>
+                  <div className="text-sm text-sky-800">Pemantauan deviasi lapangan berkoordinat Google Maps & SLA.</div>
+                </div>
+              </div>
+              {isViewAllowed(userRole, 'monev') && (
+                <button
+                  onClick={() => onNavigate('monev')}
+                  className="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold flex-shrink-0"
+                >
+                  Buka Monev
+                </button>
+              )}
+            </div>
+          </div>
+        )
       )}
 
       {/* Main Charts Row */}
@@ -444,19 +472,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           )}
         </div>
 
-        {/* Active Projects Table — Default 5 Data Rows */}
+        {/* Active Projects Table (Internal) vs Public Impact Stories (Eksternal Anonim) */}
+        {isPublic ? (
+          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-sky-700" />
+                  <span>Galeri Cerita Dampak & Program Unggulan (Publik Anonim)</span>
+                </h2>
+                <p className="text-sm text-slate-500">Ringkasan dampak sosial-ekonomi teragregasi tanpa membuka data pribadi/SPK internal</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-3 flex-1">
+              {flagships.slice(0, 4).map((f) => (
+                <div key={f.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold text-slate-900">{f.name}</span>
+                    <span className="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                      SROI 1 : {f.sroiRatio}
+                    </span>
+                  </div>
+                  <div className="text-slate-600">
+                    {f.pillar} &bull; {f.location} &bull; <strong>{f.beneficiaries} Penerima Manfaat</strong> (+{f.jobsCreated} Tenaga Kerja)
+                  </div>
+                  <p className="text-slate-700">{f.successStory}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
         <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
           <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-bold text-slate-900">Program Implementasi & Status RAG (Drill-Down)</h2>
               <p className="text-sm text-slate-500">Pemantauan langsung proyek aktif vs komitmen SAP FICO</p>
             </div>
-            <button
-              onClick={() => onNavigate('implementasi')}
-              className="text-sm font-semibold text-sky-600 hover:text-sky-700"
-            >
-              Kelola Implementasi &rarr;
-            </button>
+            {isViewAllowed(userRole, 'implementasi') && (
+              <button
+                onClick={() => onNavigate('implementasi')}
+                className="text-sm font-semibold text-sky-600 hover:text-sky-700"
+              >
+                Kelola Implementasi &rarr;
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto flex-1">
@@ -541,6 +600,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             onPageSizeChange={setProjPageSize}
           />
         </div>
+        )}
       </div>
 
       {/* Detail Proyek Popup */}
@@ -559,16 +619,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               >
                 Tutup
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDetailProject(null);
-                  onNavigate('implementasi');
-                }}
-                className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
-              >
-                Kelola di Modul Implementasi &rarr;
-              </button>
+              {isViewAllowed(userRole, 'implementasi') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDetailProject(null);
+                    onNavigate('implementasi');
+                  }}
+                  className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                >
+                  Kelola di Modul Implementasi &rarr;
+                </button>
+              )}
             </>
           )
         }

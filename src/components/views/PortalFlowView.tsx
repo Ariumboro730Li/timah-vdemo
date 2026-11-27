@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   RefreshCcw,
@@ -12,10 +12,14 @@ import {
   Hammer,
   Award,
   Store,
-  TrendingUp
+  TrendingUp,
+  Lock,
+  MessageSquareWarning,
+  ShoppingBag
 } from 'lucide-react';
 import { NavView, ProposalItem } from '../../types';
 import { useAppState } from '../../context/AppStateContext';
+import { isViewAllowed, maskNik } from '../../utils/rbac';
 
 interface PortalFlowViewProps {
   onNavigate: (view: NavView) => void;
@@ -23,7 +27,41 @@ interface PortalFlowViewProps {
 
 export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) => {
   const state = useAppState();
-  const [activeTab, setActiveTab] = useState<'flow' | 'submit' | 'track'>('flow');
+  const isPublic = state.userRole === 'pemohon';
+  const [activeTab, setActiveTab] = useState<'flow' | 'submit' | 'track' | 'grievance' | 'catalog'>(
+    isPublic ? 'submit' : 'flow'
+  );
+
+  // Grievance public form state
+  const [grvProgram, setGrvProgram] = useState('Program Pemberdayaan Masyarakat Desa');
+  const [grvLocation, setGrvLocation] = useState('Muntok, Bangka Barat');
+  const [grvDesc, setGrvDesc] = useState('');
+  const [grvSubmitted, setGrvSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (isPublic && activeTab === 'flow') {
+      setActiveTab('submit');
+    }
+  }, [isPublic, activeTab]);
+
+  const handlePublicGrievance = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!grvDesc.trim()) return;
+    state.addMonevIssue({
+      programTitle: grvProgram.trim(),
+      location: grvLocation.trim(),
+      category: 'Keluhan Warga (Grievance)',
+      source: 'Grievance Masyarakat',
+      description: grvDesc.trim(),
+      pic: 'Tim Monev & Grievance CSR',
+      deadline: '07 Des 2026',
+      status: 'Dalam Investigasi',
+      slaDaysRemaining: 7,
+      geotagCoord: '-2.0642, 105.1614'
+    });
+    setGrvDesc('');
+    setGrvSubmitted(true);
+  };
 
   // Portal submission form state
   const [applicant, setApplicant] = useState('');
@@ -141,14 +179,16 @@ export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) =>
     <div className="space-y-6">
       {/* Tabs */}
       <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-sm flex flex-wrap gap-2">
-        <button
-          onClick={() => setActiveTab('flow')}
-          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-            activeTab === 'flow' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Alur Bisnis End-to-End (Closed-Loop)
-        </button>
+        {!isPublic && (
+          <button
+            onClick={() => setActiveTab('flow')}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+              activeTab === 'flow' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Alur Bisnis End-to-End (Closed-Loop)
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('submit')}
           className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
@@ -165,10 +205,31 @@ export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) =>
         >
           Pelacakan Status Real-Time (Track & Trace)
         </button>
+        <button
+          onClick={() => {
+            setActiveTab('grievance');
+            setGrvSubmitted(false);
+          }}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5 ${
+            activeTab === 'grievance' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <MessageSquareWarning className="w-4 h-4" />
+          <span>Kanal Pengaduan (Grievance)</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('catalog')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5 ${
+            activeTab === 'catalog' ? 'bg-sky-700 text-white' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" />
+          <span>E-Katalog UMK Binaan</span>
+        </button>
       </div>
 
-      {/* TAB 1: CLOSED LOOP BUSINESS FLOW */}
-      {activeTab === 'flow' && (
+      {/* TAB 1: CLOSED LOOP BUSINESS FLOW (Internal Only) */}
+      {!isPublic && activeTab === 'flow' && (
         <div className="space-y-6">
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
             <h2 className="text-base font-bold text-slate-900">Siklus Bisnis Terintegrasi CSR / TJSL / PPM / PUMK</h2>
@@ -177,26 +238,44 @@ export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) =>
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-5">
-              {flowStages.map((stage) => (
-                <button
-                  key={stage.id}
-                  onClick={() => onNavigate(stage.id)}
-                  className={`text-left p-5 rounded-xl border-2 transition-all hover:shadow-md flex flex-col justify-between gap-3 ${stage.accent}`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="p-2 rounded-lg bg-white/80 shadow-2xs">{stage.icon}</span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-white font-bold shadow-2xs">{stage.metric}</span>
+              {flowStages.map((stage) => {
+                const allowed = isViewAllowed(state.userRole, stage.id);
+                return (
+                  <button
+                    key={stage.id}
+                    type="button"
+                    disabled={!allowed}
+                    onClick={() => allowed && onNavigate(stage.id)}
+                    className={`text-left p-5 rounded-xl border-2 transition-all flex flex-col justify-between gap-3 ${
+                      allowed
+                        ? `${stage.accent} hover:shadow-md cursor-pointer`
+                        : 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="p-2 rounded-lg bg-white/80 shadow-2xs">{stage.icon}</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-white font-bold shadow-2xs text-slate-700">{stage.metric}</span>
+                      </div>
+                      <h3 className="text-base font-bold">{stage.title}</h3>
+                      <p className="mt-1 opacity-90">{stage.subtitle}</p>
                     </div>
-                    <h3 className="text-base font-bold">{stage.title}</h3>
-                    <p className="mt-1 opacity-90">{stage.subtitle}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 font-bold pt-2 border-t border-black/10">
-                    <span>Masuk ke Modul</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </button>
-              ))}
+                    <div className="flex items-center gap-1.5 font-bold pt-2 border-t border-black/10">
+                      {allowed ? (
+                        <>
+                          <span>Masuk ke Modul</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4" />
+                          <span>Terkunci (Di luar kewenangan peran aktif)</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="mt-5 p-4 rounded-xl bg-slate-900 text-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
@@ -209,12 +288,14 @@ export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) =>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => onNavigate('import')}
-                className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold flex-shrink-0"
-              >
-                Buka Pusat Import Data
-              </button>
+              {isViewAllowed(state.userRole, 'import') && (
+                <button
+                  onClick={() => onNavigate('import')}
+                  className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold flex-shrink-0"
+                >
+                  Buka Pusat Import Data
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -243,12 +324,14 @@ export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) =>
                 >
                   Lacak Status Tiket
                 </button>
-                <button
-                  onClick={() => onNavigate('seleksi')}
-                  className="px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 font-semibold"
-                >
-                  Proses di Seleksi Proposal &rarr;
-                </button>
+                {isViewAllowed(state.userRole, 'seleksi') && (
+                  <button
+                    onClick={() => onNavigate('seleksi')}
+                    className="px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 font-semibold"
+                  >
+                    Proses di Seleksi Proposal &rarr;
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -420,6 +503,9 @@ export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) =>
                   <p className="text-slate-600">
                     {trackedProposal.programType} &bull; {trackedProposal.category} &bull; {trackedProposal.location} ({trackedProposal.ring})
                   </p>
+                  <p className="font-mono text-slate-500 mt-0.5">
+                    NIK Terverifikasi: {maskNik(trackedProposal.nik, state.userRole)}
+                  </p>
                 </div>
                 <div className="text-right">
                   <div className="text-slate-500">Nilai Pengajuan</div>
@@ -452,6 +538,91 @@ export const PortalFlowView: React.FC<PortalFlowViewProps> = ({ onNavigate }) =>
               Nomor tiket atau NIK tidak ditemukan pada daftar proposal aktif.
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 4: PUBLIC GRIEVANCE CHANNEL (KAK M-06 / Mobile Pemohon) */}
+      {activeTab === 'grievance' && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Kanal Aspirasi & Pengaduan Masyarakat (Grievance Mechanism)</h2>
+            <p className="text-slate-600 mt-1">
+              Sampaikan masukan, keluhan pelaksanaan program, atau pelaporan ketidaksesuaian secara transparan. Tiket langsung diteruskan ke Action Tracker Tim Monev dengan pemantauan SLA 7 hari kerja.
+            </p>
+          </div>
+          {grvSubmitted && (
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 font-semibold">
+              ✓ Pengaduan Anda telah teregistrasi di sistem Monev & Grievance CSR dan tercatat di data/snapshot.json.
+            </div>
+          )}
+          <form onSubmit={handlePublicGrievance} className="space-y-4 max-w-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Program / Kegiatan Terkait *</label>
+                <input
+                  type="text"
+                  required
+                  value={grvProgram}
+                  onChange={(e) => setGrvProgram(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Lokasi Kejadian *</label>
+                <input
+                  type="text"
+                  required
+                  value={grvLocation}
+                  onChange={(e) => setGrvLocation(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Uraian Aspirasi / Keluhan *</label>
+              <textarea
+                rows={4}
+                required
+                value={grvDesc}
+                onChange={(e) => setGrvDesc(e.target.value)}
+                placeholder="Tuliskan keluhan, kendala di lapangan, atau saran perbaikan program..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              <span>Kirim Tiket Pengaduan Masyarakat</span>
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 5: PUBLIC UMK CATALOG */}
+      {activeTab === 'catalog' && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Etalase E-Katalog Produk UMK Binaan PT Timah Tbk</h2>
+            <p className="text-slate-600 mt-1">
+              Katalog produk unggulan mitra binaan UMK & Koperasi yang telah melalui kurasi kualitas dan sertifikasi (KAK K-08).
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {state.umkCatalog.map((item) => (
+              <div key={item.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="px-2.5 py-0.5 rounded bg-sky-100 text-sky-800 font-semibold">{item.category}</span>
+                <div className="font-bold text-slate-900 text-base">{item.productName}</div>
+                <div className="text-slate-600">{item.businessName} &bull; {item.location}</div>
+                <div className="font-bold text-emerald-700">{item.priceRange}</div>
+                <div className="pt-2 border-t border-slate-200 text-slate-700">
+                  <div><strong>Sertifikasi:</strong> {item.certification}</div>
+                  <div><strong>Mitra Off-Taker:</strong> {item.offTakerMatch}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

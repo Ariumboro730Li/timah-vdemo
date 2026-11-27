@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavView, ImportDatasetType } from './types';
+import React, { useState, useEffect } from 'react';
+import { NavView, ImportDatasetType, UserRole } from './types';
 import { AppStateProvider, useAppState } from './context/AppStateContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -16,26 +16,178 @@ import { ImportCenterView } from './components/views/ImportCenterView';
 import { IntegrasiView } from './components/views/IntegrasiView';
 import { Modal } from './components/common/Modal';
 import { ImportDataModal } from './components/common/ImportDataModal';
-import { CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
+import { CheckCircle2, Info, AlertTriangle, X, ShieldAlert } from 'lucide-react';
+import { getRolePolicy, isViewAllowed, maskNik } from './utils/rbac';
+
+type IntegrasiTab = 'integrasi' | 'config' | 'rbac' | 'audit' | 'snapshot';
+
+const VIEW_PATHS: Record<NavView, string> = {
+  dashboard: '/dashboard',
+  portal: '/portal',
+  perencanaan: '/perencanaan',
+  seleksi: '/seleksi-proposal',
+  implementasi: '/implementasi',
+  flagship: '/program-flagship',
+  pumk: '/koperasi-pumk',
+  monev: '/monitoring-evaluasi',
+  sbr: '/registry-sbr',
+  import: '/import-data',
+  integrasi: '/integrasi-audit'
+};
+
+const PATH_TO_VIEW: Record<string, NavView> = {
+  '/': 'dashboard',
+  '/dashboard': 'dashboard',
+  '/portal': 'portal',
+  '/portal-pemohon': 'portal',
+  '/perencanaan': 'perencanaan',
+  '/seleksi': 'seleksi',
+  '/seleksi-proposal': 'seleksi',
+  '/implementasi': 'implementasi',
+  '/flagship': 'flagship',
+  '/program-flagship': 'flagship',
+  '/pumk': 'pumk',
+  '/koperasi-pumk': 'pumk',
+  '/monev': 'monev',
+  '/monitoring-evaluasi': 'monev',
+  '/sbr': 'sbr',
+  '/registry-sbr': 'sbr',
+  '/import': 'import',
+  '/import-data': 'import',
+  '/integrasi': 'integrasi',
+  '/integrasi-audit': 'integrasi'
+};
+
+const VALID_INTEGRASI_TABS: IntegrasiTab[] = ['integrasi', 'config', 'rbac', 'audit', 'snapshot'];
+
+function parseRouteFromLocation(fallbackView: NavView): { view: NavView; integrasiTab: IntegrasiTab | null } {
+  const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
+  const normalizedPath = rawPath.toLowerCase();
+  const view = PATH_TO_VIEW[normalizedPath] || fallbackView;
+
+  const params = new URLSearchParams(window.location.search);
+  const tabParam = params.get('tab') as IntegrasiTab | null;
+  const integrasiTab = tabParam && VALID_INTEGRASI_TABS.includes(tabParam) ? tabParam : null;
+
+  return { view, integrasiTab };
+}
+
+function buildUrlForView(view: NavView, integrasiTab?: IntegrasiTab | null): string {
+  const basePath = VIEW_PATHS[view] || '/dashboard';
+  if (view === 'integrasi' && integrasiTab && integrasiTab !== 'integrasi') {
+    return `${basePath}?tab=${integrasiTab}`;
+  }
+  return basePath;
+}
 
 const AppShell: React.FC = () => {
-  const { userRole, setUserRole, proposals, sbrDatabase, snapshotMeta, syncStatus, toast, clearToast } = useAppState();
-  const [currentView, setCurrentView] = useState<NavView>('dashboard');
-  const [integrasiInitialTab, setIntegrasiInitialTab] = useState<'integrasi' | 'config' | 'audit' | 'snapshot'>('integrasi');
+  const { userRole, setUserRole, showToast, proposals, sbrDatabase, snapshotMeta, syncStatus, toast, clearToast } = useAppState();
+  const initialPolicy = getRolePolicy(userRole);
+  const initialRoute = parseRouteFromLocation(initialPolicy.defaultView);
+
+  const [currentView, setCurrentView] = useState<NavView>(() =>
+    isViewAllowed(userRole, initialRoute.view) ? initialRoute.view : initialPolicy.defaultView
+  );
+  const [integrasiInitialTab, setIntegrasiInitialTab] = useState<IntegrasiTab>(
+    initialRoute.integrasiTab || (userRole === 'spi' ? 'audit' : userRole === 'sysadmin' ? 'rbac' : 'integrasi')
+  );
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isQuickSbrOpen, setIsQuickSbrOpen] = useState(false);
   const [isQuickImportOpen, setIsQuickImportOpen] = useState(false);
   const [quickNikInput, setQuickNikInput] = useState('1901042508820003');
   const [quickNikResult, setQuickNikResult] = useState<any>(null);
 
-  const pendingProposalsCount = proposals.filter((p) => p.approvalStatus === 'Menunggu').length;
+  const policy = getRolePolicy(userRole);
+  const effectiveView: NavView = isViewAllowed(userRole, currentView) ? currentView : policy.defaultView;
+
+  const syncBrowserUrl = (view: NavView, mode: 'push' | 'replace', tab?: IntegrasiTab | null) => {
+    const targetUrl = buildUrlForView(view, tab);
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (currentUrl === targetUrl) return;
+    if (mode === 'push') {
+      window.history.pushState({ view, tab: tab || null }, '', targetUrl);
+    } else {
+      window.history.replaceState({ view, tab: tab || null }, '', targetUrl);
+    }
+  };
+
+  // Normalize initial URL on mount (e.g. "/" -> "/dashboard")
+  useEffect(() => {
+    syncBrowserUrl(effectiveView, 'replace', effectiveView === 'integrasi' ? integrasiInitialTab : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen to browser Back / Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const rolePolicy = getRolePolicy(userRole);
+      const parsed = parseRouteFromLocation(rolePolicy.defaultView);
+      if (isViewAllowed(userRole, parsed.view)) {
+        setCurrentView(parsed.view);
+        if (parsed.view === 'integrasi') {
+          setIntegrasiInitialTab(parsed.integrasiTab || 'integrasi');
+        }
+      } else {
+        setCurrentView(rolePolicy.defaultView);
+        syncBrowserUrl(rolePolicy.defaultView, 'replace');
+        showToast(`Halaman tujuan dibatasi untuk peran ${rolePolicy.label} (RBAC KAK).`, 'warning');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [userRole, showToast]);
+
+  const handleRoleChange = (nextRole: UserRole) => {
+    setUserRole(nextRole);
+    const nextPolicy = getRolePolicy(nextRole);
+    let nextTab = integrasiInitialTab;
+    if (nextRole === 'spi') {
+      nextTab = 'audit';
+      setIntegrasiInitialTab('audit');
+    } else if (nextRole === 'sysadmin') {
+      nextTab = 'rbac';
+      setIntegrasiInitialTab('rbac');
+    }
+
+    if (!isViewAllowed(nextRole, currentView)) {
+      setCurrentView(nextPolicy.defaultView);
+      syncBrowserUrl(nextPolicy.defaultView, 'push', nextPolicy.defaultView === 'integrasi' ? nextTab : null);
+    } else if (currentView === 'integrasi') {
+      syncBrowserUrl('integrasi', 'replace', nextTab);
+    }
+
+    showToast(
+      `Mode peran diubah ke ${nextPolicy.label} (${nextPolicy.allowedViews.length} menu aktif${nextPolicy.canViewUnmaskedPii ? ', e-KYC Penuh' : ', Masking UU PDP'}).`,
+      'info'
+    );
+  };
+
+  const handleNavigate = (view: NavView, tab?: IntegrasiTab) => {
+    if (!isViewAllowed(userRole, view)) {
+      showToast(`Menu tersebut tidak tersedia untuk peran ${policy.label} (RBAC KAK).`, 'warning');
+      return;
+    }
+    const targetTab = view === 'integrasi' ? tab || integrasiInitialTab : null;
+    if (view === 'integrasi' && tab) {
+      setIntegrasiInitialTab(tab);
+    }
+    setCurrentView(view);
+    syncBrowserUrl(view, 'push', targetTab);
+  };
+
+  const pendingProposalsCount = proposals.filter(
+    (p) => p.approvalStatus === 'Menunggu' && p.recommendation !== 'Ditolak'
+  ).length;
 
   const getPageTitle = (view: NavView): string => {
     switch (view) {
       case 'dashboard':
-        return 'Dashboard Terpadu CSR / TJSL';
+        return userRole === 'pemohon' ? 'Ringkasan Publik Program CSR / TJSL' : 'Dashboard CSR / TJSL';
       case 'portal':
-        return 'Alur Bisnis End-to-End & Portal Pemohon';
+        return userRole === 'pemohon'
+          ? 'Portal Pemohon, Lacak Tiket & Pengaduan Masyarakat'
+          : 'Alur Bisnis End-to-End & Portal Pemohon';
       case 'perencanaan':
         return 'Perencanaan Program, Social Mapping & RKAP';
       case 'seleksi':
@@ -53,18 +205,31 @@ const AppShell: React.FC = () => {
       case 'import':
         return 'Pusat Import & Migrasi Data';
       case 'integrasi':
-        return 'Integrasi Enterprise, Konfigurasi Aturan & Audit Trail';
+        return 'Integrasi Enterprise, Konfigurasi RBAC & Audit Trail';
       default:
         return 'Dashboard';
     }
   };
 
+  useEffect(() => {
+    document.title = `${getPageTitle(effectiveView)} — CSR TJSL PT Timah Tbk`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveView, userRole]);
+
   const getDefaultImportTypeForView = (view: NavView): ImportDatasetType => {
-    if (view === 'perencanaan') return 'rkap';
-    if (view === 'seleksi' || view === 'portal') return 'proposal';
-    if (view === 'pumk') return 'pumk';
-    if (view === 'sbr') return 'sbr';
-    return 'rkap';
+    const allowed = policy.allowedImportTypes;
+    const candidate: ImportDatasetType =
+      view === 'perencanaan'
+        ? 'rkap'
+        : view === 'seleksi' || view === 'portal'
+        ? 'proposal'
+        : view === 'pumk'
+        ? 'pumk'
+        : view === 'sbr'
+        ? 'sbr'
+        : 'rkap';
+    if (allowed.includes(candidate)) return candidate;
+    return allowed[0] || 'rkap';
   };
 
   const handleQuickNikCheck = () => {
@@ -83,10 +248,10 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-100">
-      {/* Sidebar — Tanpa Penomoran */}
+      {/* Sidebar — Strict RBAC & Tanpa Penomoran */}
       <Sidebar
-        currentView={currentView}
-        onNavigate={(view) => setCurrentView(view)}
+        currentView={effectiveView}
+        onNavigate={handleNavigate}
         userRole={userRole}
         proposalPendingCount={pendingProposalsCount}
         isOpen={isSidebarOpen}
@@ -95,17 +260,16 @@ const AppShell: React.FC = () => {
       {/* Main View Area — Full Kanan & Kiri */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header
-          title={getPageTitle(currentView)}
+          title={getPageTitle(effectiveView)}
           role={userRole}
-          onRoleChange={(role) => setUserRole(role)}
+          onRoleChange={handleRoleChange}
           onOpenSbrSearch={() => {
             setIsQuickSbrOpen(true);
             setQuickNikResult(null);
           }}
           onOpenQuickImport={() => setIsQuickImportOpen(true)}
           onOpenSnapshotView={() => {
-            setIntegrasiInitialTab('snapshot');
-            setCurrentView('integrasi');
+            handleNavigate('integrasi', 'snapshot');
           }}
           snapshotMeta={snapshotMeta}
           syncStatus={syncStatus}
@@ -114,18 +278,36 @@ const AppShell: React.FC = () => {
         />
 
         <main className="flex-1 overflow-y-auto p-6 w-full">
-          <div className="w-full">
-            {currentView === 'dashboard' && <DashboardView onNavigate={(view) => setCurrentView(view)} />}
-            {currentView === 'portal' && <PortalFlowView onNavigate={(view) => setCurrentView(view)} />}
-            {currentView === 'perencanaan' && <PerencanaanView />}
-            {currentView === 'seleksi' && <SeleksiProposalView />}
-            {currentView === 'implementasi' && <ImplementasiView />}
-            {currentView === 'flagship' && <FlagshipView />}
-            {currentView === 'pumk' && <PumkView />}
-            {currentView === 'monev' && <MonevView />}
-            {currentView === 'sbr' && <SbrView />}
-            {currentView === 'import' && <ImportCenterView />}
-            {currentView === 'integrasi' && <IntegrasiView initialTab={integrasiInitialTab} />}
+          <div className="w-full space-y-5">
+            {policy.isReadOnlyAudit && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <ShieldAlert className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                  <span>
+                    <strong>Mode Audit Independen SPI & Manajemen Risiko (Segregation of Duties):</strong> Seluruh modul transaksi operasional bersifat <strong>Read-Only</strong>. Pengendalian aktif pada Risk Register, Anti-Fraud/Blacklist, dan Audit Trail.
+                  </span>
+                </div>
+              </div>
+            )}
+            {effectiveView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
+            {effectiveView === 'portal' && <PortalFlowView onNavigate={handleNavigate} />}
+            {effectiveView === 'perencanaan' && <PerencanaanView />}
+            {effectiveView === 'seleksi' && <SeleksiProposalView />}
+            {effectiveView === 'implementasi' && <ImplementasiView />}
+            {effectiveView === 'flagship' && <FlagshipView />}
+            {effectiveView === 'pumk' && <PumkView />}
+            {effectiveView === 'monev' && <MonevView />}
+            {effectiveView === 'sbr' && <SbrView />}
+            {effectiveView === 'import' && <ImportCenterView />}
+            {effectiveView === 'integrasi' && (
+              <IntegrasiView
+                initialTab={integrasiInitialTab}
+                onTabChange={(tab) => {
+                  setIntegrasiInitialTab(tab);
+                  syncBrowserUrl('integrasi', 'push', tab);
+                }}
+              />
+            )}
           </div>
         </main>
       </div>
@@ -198,8 +380,14 @@ const AppShell: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between">
-                    <div className="font-bold text-slate-900">{quickNikResult.name}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-slate-900">{quickNikResult.name}</div>
+                      <div className="font-mono text-sky-800">
+                        NIK: {maskNik(quickNikResult.nik, userRole)}{' '}
+                        {!policy.canViewUnmaskedPii && <span className="text-amber-700 font-sans font-semibold">(Masked UU PDP)</span>}
+                      </div>
+                    </div>
                     {quickNikResult.isBlacklisted && (
                       <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">BLACKLIST</span>
                     )}

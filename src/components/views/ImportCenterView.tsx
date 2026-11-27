@@ -4,11 +4,18 @@ import { ImportDatasetType } from '../../types';
 import { IMPORT_DATASET_CONFIGS, downloadTemplateFile } from '../../utils/dataImportExport';
 import { ImportDataModal } from '../common/ImportDataModal';
 import { useAppState } from '../../context/AppStateContext';
+import { getRolePolicy } from '../../utils/rbac';
 
 export const ImportCenterView: React.FC = () => {
   const state = useAppState();
+  const policy = getRolePolicy(state.userRole);
+  const allowedDatasets = Object.values(IMPORT_DATASET_CONFIGS).filter((cfg) =>
+    policy.allowedImportTypes.includes(cfg.type)
+  );
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeDataset, setActiveDataset] = useState<ImportDatasetType>('rkap');
+  const [activeDataset, setActiveDataset] = useState<ImportDatasetType>(
+    policy.allowedImportTypes[0] || 'rkap'
+  );
 
   const openImport = (type: ImportDatasetType) => {
     setActiveDataset(type);
@@ -43,11 +50,11 @@ export const ImportCenterView: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => openImport('sbr')}
+          onClick={() => openImport(policy.allowedImportTypes[0] || 'rkap')}
           className="px-4 py-2.5 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-2 shadow-xs flex-shrink-0"
         >
           <Upload className="w-4 h-4" />
-          <span>Mulai Import Data Baru</span>
+          <span>Mulai Import Data Baru ({allowedDatasets.length} Dataset)</span>
         </button>
       </div>
 
@@ -69,9 +76,9 @@ export const ImportCenterView: React.FC = () => {
         </div>
       </div>
 
-      {/* 6 Importable Datasets Grid */}
+      {/* Role-Scoped Importable Datasets Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {Object.values(IMPORT_DATASET_CONFIGS).map((cfg) => (
+        {allowedDatasets.map((cfg) => (
           <div
             key={cfg.type}
             className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between gap-4"

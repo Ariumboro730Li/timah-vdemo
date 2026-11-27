@@ -5,7 +5,7 @@ Aplikasi yang dijelaskan dalam dokumen Kerangka Acuan Kerja (KAK) ini adalah:
 "Aplikasi Terintegrasi CSR / TJSL / PPM / PUMK"
 
 1. Definisi dan Hakikat Aplikasi
-Aplikasi ini merupakan platform digital enterprise terpadu (berbasis web dan mobile) yang dirancang untuk mengelola seluruh siklus program Tanggung Jawab Sosial dan Lingkungan (TJSL), Program Pemberdayaan Masyarakat (PPM), serta Program Pendanaan Usaha Mikro dan Kecil (PUMK) secara terintegrasi dari hulu ke hilir (end-to-end).
+Aplikasi ini merupakan platform digital enterprise terpadu (berbasis web dan mobile) yang dirancang untuk mengelola seluruh Program Tanggung Jawab Sosial dan Lingkungan (TJSL), Program Pemberdayaan Masyarakat (PPM), serta Program Pendanaan Usaha Mikro dan Kecil (PUMK) secara terintegrasi dari hulu ke hilir (end-to-end).
 
 2. Karakteristik Utama Aplikasi
 - Transformasi Digital (Bukan Sekadar Digitize):

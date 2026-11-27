@@ -24,9 +24,11 @@ import {
 import { Modal } from '../common/Modal';
 import { PaginationBar } from '../common/PaginationBar';
 import { useAppState } from '../../context/AppStateContext';
+import { getRolePolicy } from '../../utils/rbac';
 
 export const FlagshipView: React.FC = () => {
-  const { flagships, updateFlagshipPerformance, advanceFlagshipTier } = useAppState();
+  const { userRole, flagships, updateFlagshipPerformance, advanceFlagshipTier } = useAppState();
+  const policy = getRolePolicy(userRole);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
   const [selectedFlagship, setSelectedFlagship] = useState<FlagshipProgram | null>(null);
@@ -256,31 +258,35 @@ export const FlagshipView: React.FC = () => {
                   <span>Detail</span>
                 </button>
                 <button
-                  onClick={() => openPerfModal(item)}
-                  className="py-2 px-2.5 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center justify-center gap-1"
-                >
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>Skoring Kinerja</span>
-                </button>
-                <button
                   onClick={() => openSroiCalc(item)}
                   className="py-2 px-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold inline-flex items-center justify-center gap-1"
                 >
                   <span>Simulasi SROI</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  disabled={item.graduationTier === 'Naik Kelas'}
-                  onClick={() => advanceFlagshipTier(item.id)}
-                  className={`py-2 px-2.5 rounded-lg font-semibold inline-flex items-center justify-center gap-1 ${
-                    item.graduationTier === 'Naik Kelas'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
-                      : 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                  }`}
-                >
-                  <Award className="w-3.5 h-3.5" />
-                  <span>{item.graduationTier === 'Naik Kelas' ? 'Tier Tertinggi' : 'Naik Tier'}</span>
-                </button>
+                {policy.canScoreFlagship && (
+                  <button
+                    onClick={() => openPerfModal(item)}
+                    className="py-2 px-2.5 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center justify-center gap-1"
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>Skoring Kinerja</span>
+                  </button>
+                )}
+                {policy.canAdvanceFlagshipTier && (
+                  <button
+                    disabled={item.graduationTier === 'Naik Kelas'}
+                    onClick={() => advanceFlagshipTier(item.id)}
+                    className={`py-2 px-2.5 rounded-lg font-semibold inline-flex items-center justify-center gap-1 ${
+                      item.graduationTier === 'Naik Kelas'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                        : 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                    }`}
+                  >
+                    <Award className="w-3.5 h-3.5" />
+                    <span>{item.graduationTier === 'Naik Kelas' ? 'Tier Tertinggi' : 'Naik Tier'}</span>
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -322,17 +328,19 @@ export const FlagshipView: React.FC = () => {
               >
                 Kalkulator SROI
               </button>
-              <button
-                onClick={() => {
-                  const target = detailFlagship;
-                  setDetailFlagshipId(null);
-                  openPerfModal(target);
-                }}
-                className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
-              >
-                Ubah Skor Kinerja
-              </button>
-              {detailFlagship.graduationTier !== 'Naik Kelas' && (
+              {policy.canScoreFlagship && (
+                <button
+                  onClick={() => {
+                    const target = detailFlagship;
+                    setDetailFlagshipId(null);
+                    openPerfModal(target);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                >
+                  Ubah Skor Kinerja
+                </button>
+              )}
+              {policy.canAdvanceFlagshipTier && detailFlagship.graduationTier !== 'Naik Kelas' && (
                 <button
                   onClick={() => advanceFlagshipTier(detailFlagship.id)}
                   className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1.5"

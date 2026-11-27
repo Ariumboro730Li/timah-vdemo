@@ -14,15 +14,18 @@ import {
   FileCheck2,
   Clock,
   ShieldCheck,
-  XCircle
+  XCircle,
+  Lock
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { ImportDataModal } from '../common/ImportDataModal';
 import { PaginationBar } from '../common/PaginationBar';
 import { useAppState } from '../../context/AppStateContext';
+import { getRolePolicy, canRoleApproveByAuthority, maskNik } from '../../utils/rbac';
 
 export const SeleksiProposalView: React.FC = () => {
   const {
+    userRole,
     proposals,
     sbrDatabase,
     scoringRubric,
@@ -32,8 +35,10 @@ export const SeleksiProposalView: React.FC = () => {
     convertProposalToExecution,
     getApproverByAmount
   } = useAppState();
+  const policy = getRolePolicy(userRole);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [selectedProposal, setSelectedProposal] = useState<ProposalItem | null>(null);
@@ -88,16 +93,43 @@ export const SeleksiProposalView: React.FC = () => {
     setIsScoringOpen(false);
   };
 
-  const filteredProposals = proposals.filter(
-    (p) =>
-      p.applicant.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.ticketNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.nik.includes(searchQuery)
-  );
+  const isRejectedProposal = (p: ProposalItem) =>
+    p.approvalStatus === 'Ditolak' || p.recommendation === 'Ditolak';
+  const isApprovedProposal = (p: ProposalItem) => p.approvalStatus === 'Disetujui';
+  const isPendingProposal = (p: ProposalItem) =>
+    p.approvalStatus === 'Menunggu' && !isRejectedProposal(p);
 
-  const pendingCount = proposals.filter((p) => p.approvalStatus === 'Menunggu').length;
-  const approvedCount = proposals.filter((p) => p.approvalStatus === 'Disetujui').length;
-  const rejectedCount = proposals.filter((p) => p.approvalStatus === 'Ditolak' || p.recommendation === 'Ditolak').length;
+  const pendingCount = proposals.filter(isPendingProposal).length;
+  const approvedCount = proposals.filter(isApprovedProposal).length;
+  const rejectedCount = proposals.filter(isRejectedProposal).length;
+
+  const filteredProposals = proposals.filter((p) => {
+    const matchStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'pending' && isPendingProposal(p)) ||
+      (statusFilter === 'approved' && isApprovedProposal(p)) ||
+      (statusFilter === 'rejected' && isRejectedProposal(p));
+    if (!matchStatus) return false;
+    const q = searchQuery.toLowerCase();
+    return (
+      !q ||
+      p.applicant.toLowerCase().includes(q) ||
+      p.ticketNo.toLowerCase().includes(q) ||
+      p.nik.includes(searchQuery)
+    );
+  });
+
+  const handleSelectCardFilter = (next: 'all' | 'pending' | 'approved' | 'rejected') => {
+    setStatusFilter((curr) => (curr === next && next !== 'all' ? 'all' : next));
+    setPage(1);
+  };
+
+  const statusFilterLabels: Record<'all' | 'pending' | 'approved' | 'rejected', string> = {
+    all: 'Semua Usulan',
+    pending: 'Menunggu Seleksi / Approval',
+    approved: 'Disetujui Komite & e-Sign',
+    rejected: 'Ditolak / Knock-out'
+  };
 
   const getSopTimeline = (p: ProposalItem) => [
     {
@@ -140,37 +172,102 @@ export const SeleksiProposalView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Pipeline Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-slate-500">Total Usulan Masuk</span>
+      {/* Pipeline Summary — Interactive Filter Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <button
+          type="button"
+          onClick={() => handleSelectCardFilter('all')}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            statusFilter === 'all'
+              ? 'border-sky-500 ring-2 ring-sky-200 bg-sky-50/30'
+              : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-slate-500">Total Usulan Masuk</span>
+            {statusFilter === 'all' && (
+              <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-semibold">Aktif</span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-slate-900 mt-1">{proposals.length} Proposal</div>
-          <span className="text-slate-500 mt-1 block">Multi-kanal (Portal, TEO, OCR, Import)</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-amber-600">Menunggu Seleksi / Approval</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectCardFilter('pending')}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            statusFilter === 'pending'
+              ? 'border-amber-500 ring-2 ring-amber-200 bg-amber-50/40'
+              : 'border-slate-200 hover:border-amber-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-amber-600">Menunggu Seleksi / Approval</span>
+            {statusFilter === 'pending' && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">Aktif</span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-amber-600 mt-1">{pendingCount} Proposal</div>
-          <span className="text-slate-500 mt-1 block">Target SLA: Turun ≥ 40%</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-emerald-600">Disetujui Komite & e-Sign</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectCardFilter('approved')}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            statusFilter === 'approved'
+              ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/40'
+              : 'border-slate-200 hover:border-emerald-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-emerald-600">Disetujui Komite & e-Sign</span>
+            {statusFilter === 'approved' && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Aktif</span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-emerald-600 mt-1">{approvedCount} Proposal</div>
-          <span className="text-emerald-700 mt-1 block">Siap / sudah di Implementasi</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-rose-600">Ditolak / Knock-out</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectCardFilter('rejected')}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            statusFilter === 'rejected'
+              ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/40'
+              : 'border-slate-200 hover:border-rose-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-rose-600">Ditolak / Knock-out</span>
+            {statusFilter === 'rejected' && (
+              <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-semibold">Aktif</span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-rose-600 mt-1">{rejectedCount} Proposal</div>
-          <span className="text-rose-700 mt-1 block">Dicegah otomatis oleh SBR & NLP</span>
-        </div>
+        </button>
       </div>
 
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
-            <h3 className="font-bold text-slate-900">Intake Proposal, Screening SBR & Scoring Rubrik Terbobot</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-bold text-slate-900">Intake Proposal, Screening SBR & Scoring Rubrik Terbobot</h3>
+              {statusFilter !== 'all' && (
+                <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-900 font-semibold">
+                  <span>Filter: {statusFilterLabels[statusFilter]} ({filteredProposals.length})</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCardFilter('all')}
+                    className="text-sky-700 hover:text-rose-700 font-bold underline"
+                  >
+                    Reset
+                  </button>
+                </span>
+              )}
+            </div>
             <p className="text-slate-500">
-              Klik nomor tiket, nama pemohon, atau tombol <strong>Detail</strong> untuk melihat berkas lengkap proposal & riwayat penilaian.
+              Klik kartu ringkasan di atas untuk memfilter tabel, atau klik <strong>Detail</strong> untuk melihat berkas lengkap proposal & riwayat penilaian.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -187,13 +284,15 @@ export const SeleksiProposalView: React.FC = () => {
                 className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-sky-500"
               />
             </div>
-            <button
-              onClick={() => setIsImportOpen(true)}
-              className="px-3.5 py-2 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-900 font-semibold inline-flex items-center gap-1.5"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Import Batch (TEO / OCR)</span>
-            </button>
+            {policy.allowedImportTypes.includes('proposal') && (
+              <button
+                onClick={() => setIsImportOpen(true)}
+                className="px-3.5 py-2 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-900 font-semibold inline-flex items-center gap-1.5"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Import Batch (TEO / OCR)</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -233,7 +332,7 @@ export const SeleksiProposalView: React.FC = () => {
                       >
                         {item.applicant}
                       </button>
-                      <div className="font-mono text-slate-500">NIK: {item.nik}</div>
+                      <div className="font-mono text-slate-500">NIK: {maskNik(item.nik, userRole)}</div>
                       <div className="text-slate-600">
                         {item.programType} &bull; {item.category} ({item.ring})
                       </div>
@@ -286,9 +385,6 @@ export const SeleksiProposalView: React.FC = () => {
                       >
                         {item.recommendation}
                       </span>
-                      <div className="text-slate-500 mt-1">
-                        Komite: <strong>{item.committeeDecision}</strong>
-                      </div>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex flex-col items-end gap-1.5">
@@ -301,46 +397,71 @@ export const SeleksiProposalView: React.FC = () => {
                             <Eye className="w-3.5 h-3.5" />
                             <span>Detail</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => openScoring(item)}
-                            className="px-2.5 py-1 rounded bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1"
-                          >
-                            <Sliders className="w-3.5 h-3.5" />
-                            <span>{item.score !== undefined ? 'Nilai' : 'Beri Nilai'}</span>
-                          </button>
+                          {policy.canScoreProposal && (
+                            <button
+                              type="button"
+                              onClick={() => openScoring(item)}
+                              className="px-2.5 py-1 rounded bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1"
+                            >
+                              <Sliders className="w-3.5 h-3.5" />
+                              <span>{item.score !== undefined ? 'Nilai' : 'Nilai'}</span>
+                            </button>
+                          )}
                         </div>
 
                         {item.score !== undefined && item.recommendation !== 'Ditolak' && item.committeeDecision === 'Belum Rapat' && (
-                          <button
-                            type="button"
-                            onClick={() => decideProposalCommittee(item.id, 'Disetujui Komite')}
-                            className="px-2.5 py-1 rounded bg-indigo-700 hover:bg-indigo-800 text-white font-semibold"
-                          >
-                            Setujui Rapat Komite
-                          </button>
+                          policy.canCommitteeDecide ? (
+                            <button
+                              type="button"
+                              onClick={() => decideProposalCommittee(item.id, 'Disetujui Komite')}
+                              className="px-2.5 py-1 rounded bg-indigo-700 hover:bg-indigo-800 text-white font-semibold"
+                            >
+                              Setujui Rapat Komite
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded bg-slate-100 text-slate-500 border border-slate-200 font-semibold inline-flex items-center gap-1">
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Menunggu Komite</span>
+                            </span>
+                          )
                         )}
 
                         {item.committeeDecision !== 'Belum Rapat' && item.committeeDecision !== 'Ditolak' && item.approvalStatus === 'Menunggu' && (
-                          <button
-                            type="button"
-                            onClick={() => approveProposalFinal(item.id)}
-                            className="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Approve ({approverLevel})</span>
-                          </button>
+                          canRoleApproveByAuthority(userRole, approverLevel) ? (
+                            <button
+                              type="button"
+                              onClick={() => approveProposalFinal(item.id)}
+                              className="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Approve ({approverLevel})</span>
+                            </button>
+                          ) : (
+                            <span
+                              title={`Sesuai Lampiran B KAK, nominal Rp ${item.requestedAmount.toLocaleString('id-ID')} memerlukan persetujuan ${approverLevel}`}
+                              className="px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold inline-flex items-center gap-1"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Kewenangan {approverLevel}</span>
+                            </span>
+                          )
                         )}
 
                         {item.approvalStatus === 'Disetujui' && !item.convertedToImpl && (
-                          <button
-                            type="button"
-                            onClick={() => convertProposalToExecution(item.id)}
-                            className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white font-semibold inline-flex items-center gap-1"
-                          >
-                            <ArrowRightCircle className="w-3.5 h-3.5" />
-                            <span>Proses ke {item.programType === 'Bantuan Charity' ? 'Charity' : 'SPK PPM'}</span>
-                          </button>
+                          policy.canConvertProposal ? (
+                            <button
+                              type="button"
+                              onClick={() => convertProposalToExecution(item.id)}
+                              className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white font-semibold inline-flex items-center gap-1"
+                            >
+                              <ArrowRightCircle className="w-3.5 h-3.5" />
+                              <span>Proses ke {item.programType === 'Bantuan Charity' ? 'Charity' : 'SPK PPM'}</span>
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded bg-sky-50 text-sky-700 font-semibold border border-sky-200">
+                              Siap Diproses BI
+                            </span>
+                          )
                         )}
 
                         {item.convertedToImpl && (
@@ -383,22 +504,25 @@ export const SeleksiProposalView: React.FC = () => {
               </button>
 
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = detailProposal;
-                    setDetailProposalId(null);
-                    openScoring(target);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
-                >
-                  <Sliders className="w-4 h-4" />
-                  <span>{detailProposal.score !== undefined ? 'Tambah Nilai Reviewer' : 'Beri Nilai Rubrik'}</span>
-                </button>
+                {policy.canScoreProposal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = detailProposal;
+                      setDetailProposalId(null);
+                      openScoring(target);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
+                  >
+                    <Sliders className="w-4 h-4" />
+                    <span>{detailProposal.score !== undefined ? 'Tambah Nilai Reviewer' : 'Nilai Rubrik'}</span>
+                  </button>
+                )}
 
                 {detailProposal.score !== undefined &&
                   detailProposal.recommendation !== 'Ditolak' &&
-                  detailProposal.committeeDecision === 'Belum Rapat' && (
+                  detailProposal.committeeDecision === 'Belum Rapat' &&
+                  (policy.canCommitteeDecide ? (
                     <>
                       <button
                         type="button"
@@ -415,22 +539,35 @@ export const SeleksiProposalView: React.FC = () => {
                         Setujui Rapat Komite
                       </button>
                     </>
-                  )}
+                  ) : (
+                    <span className="px-3.5 py-2 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 font-semibold inline-flex items-center gap-1.5">
+                      <Lock className="w-4 h-4" />
+                      <span>Menunggu Keputusan Komite (Kadiv/Direksi)</span>
+                    </span>
+                  ))}
 
                 {detailProposal.committeeDecision !== 'Belum Rapat' &&
                   detailProposal.committeeDecision !== 'Ditolak' &&
-                  detailProposal.approvalStatus === 'Menunggu' && (
-                    <button
-                      type="button"
-                      onClick={() => approveProposalFinal(detailProposal.id)}
-                      className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Approve ({getApproverByAmount(detailProposal.requestedAmount)})</span>
-                    </button>
-                  )}
+                  detailProposal.approvalStatus === 'Menunggu' && (() => {
+                    const reqApprover = getApproverByAmount(detailProposal.requestedAmount);
+                    return canRoleApproveByAuthority(userRole, reqApprover) ? (
+                      <button
+                        type="button"
+                        onClick={() => approveProposalFinal(detailProposal.id)}
+                        className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Approve ({reqApprover})</span>
+                      </button>
+                    ) : (
+                      <span className="px-3.5 py-2 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-semibold inline-flex items-center gap-1.5">
+                        <Lock className="w-4 h-4" />
+                        <span>Terkunci — Kewenangan {reqApprover}</span>
+                      </span>
+                    );
+                  })()}
 
-                {detailProposal.approvalStatus === 'Disetujui' && !detailProposal.convertedToImpl && (
+                {detailProposal.approvalStatus === 'Disetujui' && !detailProposal.convertedToImpl && policy.canConvertProposal && (
                   <button
                     type="button"
                     onClick={() => convertProposalToExecution(detailProposal.id)}
@@ -508,7 +645,7 @@ export const SeleksiProposalView: React.FC = () => {
                   <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-950 flex items-start gap-2.5">
                     <XCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <strong>Knock-Out Otomatis SBR ({detailProposal.sbrStatus}):</strong> Terdeteksi duplikasi bantuan / catatan blacklist pada NIK <span className="font-mono font-bold">{detailProposal.nik}</span> dengan kemiripan dokumen NLP sebesar <strong>{detailProposal.nlpSimilarityPercent}%</strong>.
+                      <strong>Knock-Out Otomatis SBR ({detailProposal.sbrStatus}):</strong> Terdeteksi duplikasi bantuan / catatan blacklist pada NIK <span className="font-mono font-bold">{maskNik(detailProposal.nik, userRole)}</span> dengan kemiripan dokumen NLP sebesar <strong>{detailProposal.nlpSimilarityPercent}%</strong>.
                     </div>
                   </div>
                 )}
@@ -525,8 +662,10 @@ export const SeleksiProposalView: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                   <div>
-                    <span className="text-slate-500 block">NIK Penanggung Jawab</span>
-                    <span className="font-mono font-bold text-slate-900">{detailProposal.nik}</span>
+                    <span className="text-slate-500 block">
+                      NIK Penanggung Jawab {!policy.canViewUnmaskedPii && '(Masked UU PDP)'}
+                    </span>
+                    <span className="font-mono font-bold text-slate-900">{maskNik(detailProposal.nik, userRole)}</span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">No. Legalitas / SK</span>
@@ -619,7 +758,7 @@ export const SeleksiProposalView: React.FC = () => {
 
               {detailProposal.reviewerScores.length === 0 ? (
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-500">
-                  Belum ada penilai yang memasukkan skor rubrik. Klik <strong>Beri Nilai Rubrik</strong> untuk memulai penilaian.
+                  Belum ada penilai yang memasukkan skor rubrik. Klik <strong>Nilai Rubrik</strong> untuk memulai penilaian.
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">

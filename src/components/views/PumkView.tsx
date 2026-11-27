@@ -21,15 +21,18 @@ import {
   Building2,
   ShoppingBag,
   Search,
-  Eye
+  Eye,
+  Lock
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { ImportDataModal } from '../common/ImportDataModal';
 import { PaginationBar } from '../common/PaginationBar';
 import { useAppState } from '../../context/AppStateContext';
+import { getRolePolicy, maskNik, maskVaNumber } from '../../utils/rbac';
 
 export const PumkView: React.FC = () => {
   const {
+    userRole,
     pumkNplTrendData,
     pumkLoans,
     pumkApplications,
@@ -41,10 +44,13 @@ export const PumkView: React.FC = () => {
     assignPumkCollection,
     restructurePumkLoan
   } = useAppState();
+  const policy = getRolePolicy(userRole);
 
   const [activeTab, setActiveTab] = useState<'portfolio' | 'onboarding' | 'koperasi'>('portfolio');
   const [loanSearch, setLoanSearch] = useState('');
   const [loanColFilter, setLoanColFilter] = useState('Semua');
+  const [loanQuickFilter, setLoanQuickFilter] = useState<'all' | 'npl' | 'watchlist'>('all');
+  const [appQuickFilter, setAppQuickFilter] = useState<'all' | 'pending'>('all');
   const [loanPage, setLoanPage] = useState(1);
   const [loanPageSize, setLoanPageSize] = useState(5);
   const [appPage, setAppPage] = useState(1);
@@ -109,28 +115,106 @@ export const PumkView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* KPI Metrics */}
+      {/* KPI Metrics — Interactive Filter Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-slate-500">Total Baki Debet Aktif</span>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('portfolio');
+            setLoanQuickFilter('all');
+            setLoanColFilter('Semua');
+            setLoanPage(1);
+          }}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            activeTab === 'portfolio' && loanQuickFilter === 'all' && loanColFilter === 'Semua'
+              ? 'border-sky-500 ring-2 ring-sky-200 bg-sky-50/30'
+              : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-slate-500">Total Baki Debet Aktif</span>
+            {activeTab === 'portfolio' && loanQuickFilter === 'all' && loanColFilter === 'Semua' && (
+              <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-semibold">Aktif</span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-slate-900 mt-1">Rp {(totalRemaining / 1000000).toLocaleString('id-ID')} Jt</div>
           <span className="text-slate-500 mt-1 block">{pumkLoans.length} Mitra Binaan Aktif</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-emerald-600">Rasio NPL (&gt; 90 Hari)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('portfolio');
+            setLoanQuickFilter((curr) => (curr === 'npl' ? 'all' : 'npl'));
+            setLoanColFilter('Semua');
+            setLoanPage(1);
+          }}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            activeTab === 'portfolio' && loanQuickFilter === 'npl'
+              ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/40'
+              : 'border-slate-200 hover:border-emerald-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-emerald-600">Rasio NPL (&gt; 90 Hari)</span>
+            {activeTab === 'portfolio' && loanQuickFilter === 'npl' && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Aktif</span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-emerald-600 mt-1">{nplPct}%</div>
-          <span className="text-emerald-700 mt-1 block">Rekonsiliasi Harian via VA Bank</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-sky-600">Antrean Onboarding 5C</span>
+          <span className="text-emerald-700 mt-1 block">
+            {pumkLoans.filter((l) => l.dpd > 90).length} Debitur DPD &gt; 90 Hari
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('onboarding');
+            setAppQuickFilter((curr) => (activeTab === 'onboarding' && curr === 'pending' ? 'all' : 'pending'));
+            setAppPage(1);
+          }}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            activeTab === 'onboarding'
+              ? 'border-sky-500 ring-2 ring-sky-200 bg-sky-50/40'
+              : 'border-slate-200 hover:border-sky-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-sky-600">Antrean Onboarding 5C</span>
+            {activeTab === 'onboarding' && (
+              <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-semibold">
+                {appQuickFilter === 'pending' ? 'Antrean' : 'Semua'}
+              </span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-sky-700 mt-1">{pumkApplications.filter((a) => a.status !== 'Disetujui & Cair').length} Pengajuan</div>
-          <span className="text-slate-500 mt-1 block">Analisis 5C & Credit Scoring</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <span className="font-bold uppercase tracking-wider text-amber-600">Debitur Watchlist (DPD &gt; 0)</span>
+          <span className="text-slate-500 mt-1 block">Klik untuk buka tabel Onboarding 5C</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('portfolio');
+            setLoanQuickFilter((curr) => (curr === 'watchlist' ? 'all' : 'watchlist'));
+            setLoanColFilter('Semua');
+            setLoanPage(1);
+          }}
+          className={`text-left bg-white rounded-xl p-4 shadow-sm transition-all cursor-pointer border ${
+            activeTab === 'portfolio' && loanQuickFilter === 'watchlist'
+              ? 'border-amber-500 ring-2 ring-amber-200 bg-amber-50/40'
+              : 'border-slate-200 hover:border-amber-300 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold uppercase tracking-wider text-amber-600">Debitur Watchlist (DPD &gt; 0)</span>
+            {activeTab === 'portfolio' && loanQuickFilter === 'watchlist' && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">Aktif</span>
+            )}
+          </div>
           <div className="text-2xl font-bold text-amber-600 mt-1">{watchlistCount} Debitur</div>
           <span className="text-slate-500 mt-1 block">Early Warning & Field Collection</span>
-        </div>
+        </button>
       </div>
 
       {/* Tabs & Actions */}
@@ -163,20 +247,24 @@ export const PumkView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setIsImportOpen(true)}
-            className="px-3.5 py-2 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-900 font-semibold inline-flex items-center gap-1.5"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Import Portofolio MCOS / PDC</span>
-          </button>
-          <button
-            onClick={() => setIsAddAppOpen(true)}
-            className="px-3.5 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Pengajuan PUMK (5C)</span>
-          </button>
+          {policy.allowedImportTypes.includes('pumk') && (
+            <button
+              onClick={() => setIsImportOpen(true)}
+              className="px-3.5 py-2 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-900 font-semibold inline-flex items-center gap-1.5"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Import Portofolio MCOS / PDC</span>
+            </button>
+          )}
+          {policy.canCreatePumk && (
+            <button
+              onClick={() => setIsAddAppOpen(true)}
+              className="px-3.5 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Pengajuan PUMK (5C)</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -260,7 +348,24 @@ export const PumkView: React.FC = () => {
 
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="font-bold text-slate-900">Daftar Pinjaman Kemitraan PUMK, Virtual Account & Collection Workflow</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-slate-900">Daftar Pinjaman Kemitraan PUMK, Virtual Account & Collection Workflow</h3>
+                {loanQuickFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 font-semibold">
+                    <span>Filter: {loanQuickFilter === 'npl' ? 'NPL (DPD > 90 Hari)' : 'Watchlist (DPD > 0 Hari)'}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoanQuickFilter('all');
+                        setLoanPage(1);
+                      }}
+                      className="text-amber-800 hover:text-rose-700 font-bold underline"
+                    >
+                      Reset
+                    </button>
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-64">
                   <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -282,11 +387,16 @@ export const PumkView: React.FC = () => {
                   <option value="Pemantauan">Pemantauan</option>
                   <option value="Kurang Lancar">Kurang Lancar</option>
                   <option value="Diragukan">Diragukan</option>
+                  <option value="Macet">Macet</option>
                 </select>
               </div>
             </div>
             {(() => {
               const filteredLoans = pumkLoans.filter((l) => {
+                const matchQuick =
+                  loanQuickFilter === 'all' ||
+                  (loanQuickFilter === 'npl' && l.dpd > 90) ||
+                  (loanQuickFilter === 'watchlist' && l.dpd > 0);
                 const matchCol = loanColFilter === 'Semua' || l.collectibility === loanColFilter;
                 const q = loanSearch.toLowerCase();
                 const matchQ =
@@ -294,7 +404,7 @@ export const PumkView: React.FC = () => {
                   l.borrowerName.toLowerCase().includes(q) ||
                   l.contractNo.toLowerCase().includes(q) ||
                   l.vaNumber.includes(q);
-                return matchCol && matchQ;
+                return matchQuick && matchCol && matchQ;
               });
               const pageLoans = filteredLoans.slice((loanPage - 1) * loanPageSize, loanPage * loanPageSize);
               return (
@@ -322,7 +432,7 @@ export const PumkView: React.FC = () => {
                               >
                                 {loan.contractNo}
                               </button>
-                              <div className="text-slate-500 font-mono">VA: {loan.vaNumber}</div>
+                              <div className="text-slate-500 font-mono">VA: {maskVaNumber(loan.vaNumber, userRole)}</div>
                             </td>
                             <td className="py-3 px-4">
                               <button
@@ -380,7 +490,7 @@ export const PumkView: React.FC = () => {
                                   <Eye className="w-4 h-4" />
                                   <span>Detail</span>
                                 </button>
-                                {loan.dpd > 0 && !loan.collectionAssigned && (
+                                {policy.canManagePumkLoan && loan.dpd > 0 && !loan.collectionAssigned && (
                                   <button
                                     onClick={() => assignPumkCollection(loan.id)}
                                     className="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-semibold inline-flex items-center gap-1"
@@ -389,7 +499,7 @@ export const PumkView: React.FC = () => {
                                     <span>Tugaskan Collection</span>
                                   </button>
                                 )}
-                                {loan.dpd > 30 && (
+                                {policy.canManagePumkLoan && loan.dpd > 30 && (
                                   <button
                                     onClick={() => restructurePumkLoan(loan.id)}
                                     className="px-3 py-1 rounded bg-rose-700 hover:bg-rose-800 text-white font-semibold inline-flex items-center gap-1"
@@ -420,11 +530,35 @@ export const PumkView: React.FC = () => {
       )}
 
       {/* TAB 2: ONBOARDING & 5C CREDIT SCORING */}
-      {activeTab === 'onboarding' && (
+      {activeTab === 'onboarding' && (() => {
+        const filteredApps =
+          appQuickFilter === 'pending'
+            ? pumkApplications.filter((a) => a.status !== 'Disetujui & Cair')
+            : pumkApplications;
+        return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200">
-            <h3 className="font-bold text-slate-900">Onboarding Permohonan Pendanaan PUMK & Analisis Kelayakan 5C (SOP 11.3)</h3>
-            <p className="text-slate-500">Alur: Onboarding & OCR &rarr; Survei Lapangan Mobile &rarr; Komite Pendanaan &rarr; Akad e-Sign & Pencairan ke Portofolio Aktif</p>
+          <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-slate-900">Onboarding Permohonan Pendanaan PUMK & Analisis Kelayakan 5C (SOP 11.3)</h3>
+                {appQuickFilter === 'pending' && (
+                  <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-900 font-semibold">
+                    <span>Filter: Antrean Aktif ({filteredApps.length})</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppQuickFilter('all');
+                        setAppPage(1);
+                      }}
+                      className="text-sky-700 hover:text-rose-700 font-bold underline"
+                    >
+                      Tampilkan Semua
+                    </button>
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-500">Alur: Onboarding & OCR &rarr; Survei Lapangan Mobile &rarr; Komite Pendanaan &rarr; Akad e-Sign & Pencairan ke Portofolio Aktif</p>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -439,7 +573,7 @@ export const PumkView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pumkApplications.slice((appPage - 1) * appPageSize, appPage * appPageSize).map((app) => (
+                {filteredApps.slice((appPage - 1) * appPageSize, appPage * appPageSize).map((app) => (
                   <tr key={app.id} className="hover:bg-slate-50/70">
                     <td className="py-3 px-4 font-mono font-bold text-sky-800">
                       <button
@@ -459,7 +593,7 @@ export const PumkView: React.FC = () => {
                         {app.businessName}
                       </button>
                       <div className="text-slate-600">{app.applicantName} &bull; {app.businessType}</div>
-                      <div className="font-mono text-slate-500">NIK: {app.nik} &bull; {app.nibOrAhu}</div>
+                      <div className="font-mono text-slate-500">NIK: {maskNik(app.nik, userRole)} &bull; {app.nibOrAhu}</div>
                     </td>
                     <td className="py-3 px-4">
                       <div>Ajuan: Rp {app.requestedPlafon.toLocaleString('id-ID')} ({app.tenorMonths} bln)</div>
@@ -492,18 +626,28 @@ export const PumkView: React.FC = () => {
                           <Eye className="w-4 h-4" />
                           <span>Detail</span>
                         </button>
-                        {app.status !== 'Disetujui & Cair' ? (
-                          <button
-                            onClick={() => advancePumkApplication(app.id)}
-                            className="px-3 py-1 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
-                          >
-                            {app.status === 'Onboarding'
-                              ? 'Kirim Survei Lapangan'
-                              : app.status === 'Survei Lapangan'
-                              ? 'Ajukan ke Komite'
-                              : 'Setujui Akad & Cairkan'}
-                          </button>
-                        ) : (
+                        {app.status !== 'Disetujui & Cair' ? (() => {
+                          const canAdvance =
+                            userRole === 'pumk' ||
+                            (userRole === 'kadiv' && app.status === 'Komite Pendanaan');
+                          return canAdvance ? (
+                            <button
+                              onClick={() => advancePumkApplication(app.id)}
+                              className="px-3 py-1 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                            >
+                              {app.status === 'Onboarding'
+                                ? 'Kirim Survei Lapangan'
+                                : app.status === 'Survei Lapangan'
+                                ? 'Ajukan ke Komite'
+                                : 'Setujui Akad & Cairkan'}
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200 font-semibold inline-flex items-center gap-1">
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>{app.status === 'Komite Pendanaan' ? 'Kewenangan Komite/PUMK' : 'Kewenangan Bidang PUMK'}</span>
+                            </span>
+                          );
+                        })() : (
                           <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
                             <CheckCircle2 className="w-4 h-4" /> Aktif di Portofolio
                           </span>
@@ -516,14 +660,15 @@ export const PumkView: React.FC = () => {
             </table>
           </div>
           <PaginationBar
-            totalItems={pumkApplications.length}
+            totalItems={filteredApps.length}
             currentPage={appPage}
             pageSize={appPageSize}
             onPageChange={setAppPage}
             onPageSizeChange={setAppPageSize}
           />
         </div>
-      )}
+        );
+      })()}
 
       {/* TAB 3: KOPERASI & E-KATALOG UMK */}
       {activeTab === 'koperasi' && (
@@ -642,7 +787,7 @@ export const PumkView: React.FC = () => {
               <button onClick={() => setSelectedLoanId(null)} className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-semibold">
                 Tutup
               </button>
-              {selectedLoan.dpd > 0 && !selectedLoan.collectionAssigned && (
+              {policy.canManagePumkLoan && selectedLoan.dpd > 0 && !selectedLoan.collectionAssigned && (
                 <button
                   onClick={() => assignPumkCollection(selectedLoan.id)}
                   className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold inline-flex items-center gap-1.5"
@@ -651,7 +796,7 @@ export const PumkView: React.FC = () => {
                   <span>Tugaskan Collection</span>
                 </button>
               )}
-              {selectedLoan.dpd > 30 && (
+              {policy.canManagePumkLoan && selectedLoan.dpd > 30 && (
                 <button
                   onClick={() => restructurePumkLoan(selectedLoan.id)}
                   className="px-4 py-2 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-semibold inline-flex items-center gap-1.5"
@@ -660,13 +805,19 @@ export const PumkView: React.FC = () => {
                   <span>Restrukturisasi</span>
                 </button>
               )}
-              {selectedLoan.remainingPrincipal > 0 && (
+              {policy.canManagePumkLoan && selectedLoan.remainingPrincipal > 0 && (
                 <button
                   onClick={() => payPumkInstallment(selectedLoan.id)}
                   className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
                 >
                   Simulasikan Terima Pembayaran Angsuran (VA)
                 </button>
+              )}
+              {!policy.canManagePumkLoan && (
+                <span className="px-3.5 py-2 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 font-semibold inline-flex items-center gap-1.5">
+                  <Lock className="w-4 h-4" />
+                  <span>Mode Pantau (Operasional oleh Bidang PUMK)</span>
+                </span>
               )}
             </>
           )
@@ -709,9 +860,11 @@ export const PumkView: React.FC = () => {
                 <div className="text-slate-600">{selectedLoan.businessType}</div>
               </div>
               <div>
-                <span className="text-slate-500 font-semibold block">Nomor Virtual Account & NIK:</span>
-                <div className="font-mono font-bold text-sky-800">VA: {selectedLoan.vaNumber}</div>
-                {selectedLoan.nik && <div className="font-mono text-slate-600">NIK: {selectedLoan.nik}</div>}
+                <span className="text-slate-500 font-semibold block">
+                  Nomor Virtual Account & NIK {!policy.canViewUnmaskedPii && '• Masked UU PDP'}:
+                </span>
+                <div className="font-mono font-bold text-sky-800">VA: {maskVaNumber(selectedLoan.vaNumber, userRole)}</div>
+                {selectedLoan.nik && <div className="font-mono text-slate-600">NIK: {maskNik(selectedLoan.nik, userRole)}</div>}
               </div>
               <div>
                 <span className="text-slate-500 font-semibold block">Plafon & Sisa Baki Debet:</span>
@@ -776,18 +929,28 @@ export const PumkView: React.FC = () => {
               <button onClick={() => setSelectedAppId(null)} className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-semibold">
                 Tutup
               </button>
-              {selectedApp.status !== 'Disetujui & Cair' && (
-                <button
-                  onClick={() => advancePumkApplication(selectedApp.id)}
-                  className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
-                >
-                  {selectedApp.status === 'Onboarding'
-                    ? 'Kirim Survei Lapangan'
-                    : selectedApp.status === 'Survei Lapangan'
-                    ? 'Ajukan ke Komite'
-                    : 'Setujui Akad & Cairkan'}
-                </button>
-              )}
+              {selectedApp.status !== 'Disetujui & Cair' && (() => {
+                const canAdvance =
+                  userRole === 'pumk' ||
+                  (userRole === 'kadiv' && selectedApp.status === 'Komite Pendanaan');
+                return canAdvance ? (
+                  <button
+                    onClick={() => advancePumkApplication(selectedApp.id)}
+                    className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                  >
+                    {selectedApp.status === 'Onboarding'
+                      ? 'Kirim Survei Lapangan'
+                      : selectedApp.status === 'Survei Lapangan'
+                      ? 'Ajukan ke Komite'
+                      : 'Setujui Akad & Cairkan'}
+                  </button>
+                ) : (
+                  <span className="px-3.5 py-2 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 font-semibold inline-flex items-center gap-1.5">
+                    <Lock className="w-4 h-4" />
+                    <span>Kewenangan Bidang PUMK / Komite</span>
+                  </span>
+                );
+              })()}
             </>
           )
         }
@@ -825,8 +988,10 @@ export const PumkView: React.FC = () => {
                 <div className="text-slate-700">{selectedApp.applicantName} &bull; {selectedApp.businessType}</div>
               </div>
               <div>
-                <span className="text-slate-500 font-semibold block">Identitas & Legalitas:</span>
-                <div className="font-mono text-slate-800">NIK: {selectedApp.nik}</div>
+                <span className="text-slate-500 font-semibold block">
+                  Identitas & Legalitas {!policy.canViewUnmaskedPii && '• Masked UU PDP'}:
+                </span>
+                <div className="font-mono text-slate-800">NIK: {maskNik(selectedApp.nik, userRole)}</div>
                 <div className="font-mono text-slate-600">{selectedApp.nibOrAhu}</div>
               </div>
               <div>

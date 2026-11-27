@@ -23,9 +23,11 @@ import { Modal } from '../common/Modal';
 import { PaginationBar } from '../common/PaginationBar';
 import { useAppState } from '../../context/AppStateContext';
 import { exportRowsToExcel } from '../../utils/dataImportExport';
+import { getRolePolicy } from '../../utils/rbac';
 
 export const MonevView: React.FC = () => {
   const {
+    userRole,
     monevIndicators,
     monevIssues,
     lessonsLearned,
@@ -34,6 +36,7 @@ export const MonevView: React.FC = () => {
     updateMonevIssueStatus,
     applyLessonToRkap
   } = useAppState();
+  const policy = getRolePolicy(userRole);
 
   const [activeTab, setActiveTab] = useState<'issues' | 'indicators' | 'oecd'>('issues');
   const [issPage, setIssPage] = useState(1);
@@ -147,20 +150,24 @@ export const MonevView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleExportGriReport}
-            className="px-3.5 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-semibold inline-flex items-center gap-1.5"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Ekspor Laporan TJSL / GRI (.xlsx)</span>
-          </button>
-          <button
-            onClick={() => setIsAddIssueOpen(true)}
-            className="px-3.5 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Catat Temuan / Aduan</span>
-          </button>
+          {policy.canExportReports && (
+            <button
+              onClick={handleExportGriReport}
+              className="px-3.5 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-semibold inline-flex items-center gap-1.5"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Ekspor Laporan TJSL / GRI (.xlsx)</span>
+            </button>
+          )}
+          {policy.canManageMonevIssues && (
+            <button
+              onClick={() => setIsAddIssueOpen(true)}
+              className="px-3.5 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold inline-flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Catat Temuan / Aduan</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -255,17 +262,19 @@ export const MonevView: React.FC = () => {
                           <span>Detail</span>
                         </button>
                         {iss.status !== 'Selesai Verifikasi' ? (
-                          <button
-                            onClick={() =>
-                              updateMonevIssueStatus(
-                                iss.id,
-                                iss.status === 'Dalam Investigasi' ? 'Dalam Perbaikan' : 'Selesai Verifikasi'
-                              )
-                            }
-                            className="px-3 py-1 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
-                          >
-                            {iss.status === 'Dalam Investigasi' ? 'Mulai Perbaikan' : 'Selesaikan & Verifikasi'}
-                          </button>
+                          policy.canManageMonevIssues ? (
+                            <button
+                              onClick={() =>
+                                updateMonevIssueStatus(
+                                  iss.id,
+                                  iss.status === 'Dalam Investigasi' ? 'Dalam Perbaikan' : 'Selesai Verifikasi'
+                                )
+                              }
+                              className="px-3 py-1 rounded-lg bg-sky-700 hover:bg-sky-800 text-white font-semibold"
+                            >
+                              {iss.status === 'Dalam Investigasi' ? 'Mulai Perbaikan' : 'Selesaikan & Verifikasi'}
+                            </button>
+                          ) : null
                         ) : (
                           <span className="text-emerald-700 font-semibold inline-flex items-center gap-1">
                             <CheckCircle2 className="w-4 h-4" /> Terverifikasi
@@ -448,7 +457,7 @@ export const MonevView: React.FC = () => {
                       <span className="px-3 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
                         ✓ Sudah Masuk Perencanaan RKAP
                       </span>
-                    ) : (
+                    ) : policy.canApplyClosedLoop ? (
                       <button
                         onClick={() => applyLessonToRkap(ls.id)}
                         className="px-3.5 py-1.5 rounded-lg bg-violet-700 hover:bg-violet-800 text-white font-semibold inline-flex items-center gap-1.5"
@@ -456,6 +465,10 @@ export const MonevView: React.FC = () => {
                         <RefreshCcw className="w-4 h-4" />
                         <span>Konversi ke Draft RKAP (Closed-Loop)</span>
                       </button>
+                    ) : (
+                      <span className="px-3 py-1 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">
+                        Menunggu Bidang Perencanaan / Monev
+                      </span>
                     )}
                   </div>
                 </div>
@@ -480,7 +493,7 @@ export const MonevView: React.FC = () => {
               >
                 Tutup
               </button>
-              {selectedIssue.status !== 'Selesai Verifikasi' && (
+              {policy.canManageMonevIssues && selectedIssue.status !== 'Selesai Verifikasi' && (
                 <button
                   onClick={() =>
                     updateMonevIssueStatus(

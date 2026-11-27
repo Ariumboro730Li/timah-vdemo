@@ -12,8 +12,11 @@ import {
   UserCheck,
   Upload,
   ShieldCheck,
-  Building2
+  Building2,
+  Lock,
+  EyeOff
 } from 'lucide-react';
+import { getRolePolicy, isViewAllowed } from '../../utils/rbac';
 
 interface SidebarProps {
   currentView: NavView;
@@ -22,17 +25,6 @@ interface SidebarProps {
   proposalPendingCount: number;
   isOpen?: boolean;
 }
-
-const roleProfile: Record<UserRole, { initials: string; name: string; sub: string }> = {
-  direksi: { initials: 'DR', name: 'Dewan Direksi', sub: 'Eksekutif Korporat' },
-  kadiv: { initials: 'KD', name: 'Kepala Divisi CSR', sub: 'PT Timah Tbk' },
-  perencanaan: { initials: 'BP', name: 'Bidang Perencanaan', sub: 'Divisi CSR' },
-  implementasi: { initials: 'BI', name: 'Bidang Implementasi', sub: 'Divisi CSR' },
-  pumk: { initials: 'BK', name: 'Bidang Koperasi & PUMK', sub: 'Divisi CSR' },
-  monev: { initials: 'MV', name: 'Tim Monev & Evaluasi', sub: 'Divisi CSR' },
-  spi: { initials: 'SP', name: 'Auditor SPI & MR', sub: 'Pengawasan Internal' },
-  pemohon: { initials: 'PM', name: 'Portal Pemohon / Mitra', sub: 'Akses Eksternal' }
-};
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentView,
@@ -43,20 +35,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const overviewNavItems: { id: NavView; label: string; icon: React.ReactNode }[] = [
+  const policy = getRolePolicy(userRole);
+  const isPublic = userRole === 'pemohon';
+
+  type SidebarNavItem = {
+    id: NavView;
+    label: string;
+    icon: React.ReactNode;
+    badge?: string;
+    badgeColor?: string;
+  };
+
+  const allOverviewNavItems: SidebarNavItem[] = [
     {
       id: 'dashboard',
-      label: 'Dashboard Terpadu',
+      label: isPublic ? 'Ringkasan Publik CSR' : 'Dashboard',
       icon: <LayoutDashboard className="w-4 h-4" />
     },
     {
       id: 'portal',
-      label: 'Alur & Portal Pemohon',
+      label: isPublic ? 'Portal Pemohon & Aduan' : 'Alur & Portal Pemohon',
       icon: <GitBranch className="w-4 h-4" />
     }
   ];
+  const overviewNavItems = allOverviewNavItems.filter((item) => isViewAllowed(userRole, item.id));
 
-  const cycleNavItems: { id: NavView; label: string; icon: React.ReactNode; badge?: string; badgeColor?: string }[] = [
+  const allCycleNavItems: SidebarNavItem[] = [
     {
       id: 'perencanaan',
       label: 'Perencanaan & RKAP',
@@ -90,8 +94,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <TrendingUp className="w-4 h-4" />
     }
   ];
+  const cycleNavItems = allCycleNavItems.filter((item) => isViewAllowed(userRole, item.id));
 
-  const governanceNavItems: { id: NavView; label: string; icon: React.ReactNode }[] = [
+  const allGovernanceNavItems: SidebarNavItem[] = [
     {
       id: 'sbr',
       label: 'Registry, Mitra & Aset',
@@ -108,47 +113,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <ShieldCheck className="w-4 h-4" />
     }
   ];
-
-  const profile = roleProfile[userRole];
+  const governanceNavItems = allGovernanceNavItems.filter((item) => isViewAllowed(userRole, item.id));
 
   const renderGroup = (
     heading: string,
     items: { id: NavView; label: string; icon: React.ReactNode; badge?: string; badgeColor?: string }[]
-  ) => (
-    <div>
-      <div className="px-3 pb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        {heading}
+  ) => {
+    if (items.length === 0) return null;
+    return (
+      <div>
+        <div className="px-3 pb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
+          {heading}
+        </div>
+        <div className="space-y-1">
+          {items.map((item) => {
+            const active = currentView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
+                  active
+                    ? 'bg-sky-600 text-white shadow-sm'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <span className={active ? 'text-white' : 'text-slate-400'}>{item.icon}</span>
+                <span className="flex-1 truncate">{item.label}</span>
+                {item.badge && (
+                  <span
+                    className={`text-sm font-semibold px-2 py-0.5 rounded-full text-white ${
+                      item.badgeColor || 'bg-slate-700'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="space-y-1">
-        {items.map((item) => {
-          const active = currentView === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
-                active
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span className={active ? 'text-white' : 'text-slate-400'}>{item.icon}</span>
-              <span className="flex-1 truncate">{item.label}</span>
-              {item.badge && (
-                <span
-                  className={`text-sm font-semibold px-2 py-0.5 rounded-full text-white ${
-                    item.badgeColor || 'bg-slate-700'
-                  }`}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <aside className="w-72 bg-slate-900 text-slate-100 flex flex-col flex-shrink-0 border-r border-slate-800 select-none">
@@ -159,25 +166,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         <div className="min-w-0">
           <div className="text-sm font-bold tracking-tight text-white truncate">CSR &bull; TJSL TIMAH</div>
-          <div className="text-sm text-slate-400 truncate">Platform PPM & PUMK</div>
+          <div className="text-sm text-slate-400 truncate">
+            {isPublic ? 'Portal Eksternal Publik' : 'Platform PPM & PUMK'}
+          </div>
         </div>
       </div>
 
-      {/* Navigation Groups — Tanpa Penomoran */}
+      {/* Navigation Groups — Strict RBAC (Opsi 1) & Tanpa Penomoran */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {renderGroup('Utama', overviewNavItems)}
-        {renderGroup('Siklus Program', cycleNavItems)}
+        {renderGroup(isPublic ? 'Layanan Publik' : 'Utama', overviewNavItems)}
+        {renderGroup('Program', cycleNavItems)}
         {renderGroup('Tata Kelola & Data', governanceNavItems)}
+
+       
       </div>
 
       {/* User Footer */}
       <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center gap-3">
         <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-sm font-bold text-sky-400 flex-shrink-0">
-          {profile.initials}
+          {policy.initials}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-slate-200 truncate">{profile.name}</div>
-          <div className="text-sm text-slate-400 truncate">{profile.sub}</div>
+          <div className="text-sm font-semibold text-slate-200 truncate flex items-center gap-1">
+            <span className="truncate">{policy.shortName}</span>
+            {policy.isReadOnlyAudit && <Lock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+          </div>
+          <div className="text-sm text-slate-400 truncate">{policy.subtitle}</div>
         </div>
       </div>
     </aside>

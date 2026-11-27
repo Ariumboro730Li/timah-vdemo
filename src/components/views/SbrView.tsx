@@ -16,9 +16,11 @@ import { Modal } from '../common/Modal';
 import { ImportDataModal } from '../common/ImportDataModal';
 import { PaginationBar } from '../common/PaginationBar';
 import { useAppState } from '../../context/AppStateContext';
+import { getRolePolicy, maskNik } from '../../utils/rbac';
 
 export const SbrView: React.FC = () => {
   const {
+    userRole,
     sbrDatabase,
     partners,
     programAssets,
@@ -26,6 +28,7 @@ export const SbrView: React.FC = () => {
     toggleSbrBlacklist,
     togglePartnerBlacklist
   } = useAppState();
+  const policy = getRolePolicy(userRole);
 
   const [activeTab, setActiveTab] = useState<'sbr' | 'mitra' | 'aset' | 'risiko'>('sbr');
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,18 +104,19 @@ export const SbrView: React.FC = () => {
           </button>
         </div>
 
-        {(activeTab === 'sbr' || activeTab === 'mitra') && (
-          <button
-            onClick={() => {
-              setImportType(activeTab === 'sbr' ? 'sbr' : 'mitra');
-              setImportOpen(true);
-            }}
-            className="px-3.5 py-2 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-900 font-semibold inline-flex items-center gap-1.5"
-          >
-            <Upload className="w-4 h-4" />
-            <span>{activeTab === 'sbr' ? 'Import Migrasi SBR' : 'Import Data Mitra'}</span>
-          </button>
-        )}
+        {(activeTab === 'sbr' || activeTab === 'mitra') &&
+          policy.allowedImportTypes.includes(activeTab === 'sbr' ? 'sbr' : 'mitra') && (
+            <button
+              onClick={() => {
+                setImportType(activeTab === 'sbr' ? 'sbr' : 'mitra');
+                setImportOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-lg bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-900 font-semibold inline-flex items-center gap-1.5"
+            >
+              <Upload className="w-4 h-4" />
+              <span>{activeTab === 'sbr' ? 'Import Migrasi SBR' : 'Import Data Mitra'}</span>
+            </button>
+          )}
       </div>
 
       {/* TAB 1: SINGLE BENEFICIARY REGISTRY */}
@@ -126,7 +130,7 @@ export const SbrView: React.FC = () => {
               </p>
             </div>
             <span className="px-3 py-1 rounded-lg bg-white text-emerald-800 border border-emerald-200 font-semibold flex-shrink-0">
-              ✓ Terhubung Dukcapil e-KYC
+              {policy.canViewUnmaskedPii ? '✓ Dukcapil e-KYC (NIK Penuh)' : '✓ UU PDP: Masking NIK Aktif'}
             </span>
           </div>
 
@@ -158,7 +162,7 @@ export const SbrView: React.FC = () => {
                     <span className="font-bold uppercase tracking-wider text-slate-400">Profil Terverifikasi SBR</span>
                     <h3 className="text-base font-bold text-slate-900 mt-0.5">{selectedRecord.name}</h3>
                     <div className="font-mono text-emerald-700 font-semibold">
-                      NIK: {selectedRecord.nik} {selectedRecord.npwpOrNib ? `• ${selectedRecord.npwpOrNib}` : ''}
+                      NIK: {maskNik(selectedRecord.nik, userRole)} {selectedRecord.npwpOrNib ? `• ${selectedRecord.npwpOrNib}` : ''}
                     </div>
                     <p className="text-slate-600 mt-1">{selectedRecord.address}</p>
                   </div>
@@ -236,7 +240,7 @@ export const SbrView: React.FC = () => {
                           onClick={() => setDetailSbrNik(b.nik)}
                           className="hover:underline text-left"
                         >
-                          {b.nik}
+                          {maskNik(b.nik, userRole)}
                         </button>
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-900">
@@ -269,17 +273,19 @@ export const SbrView: React.FC = () => {
                             <Eye className="w-4 h-4" />
                             <span>Detail</span>
                           </button>
-                          <button
-                            onClick={() => toggleSbrBlacklist(b.nik)}
-                            className={`px-2.5 py-1 rounded-lg font-semibold inline-flex items-center gap-1 ${
-                              b.isBlacklisted
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
-                            }`}
-                          >
-                            <Ban className="w-3.5 h-3.5" />
-                            <span>{b.isBlacklisted ? 'Pulihkan' : 'Blacklist'}</span>
-                          </button>
+                          {policy.canToggleSbrBlacklist && (
+                            <button
+                              onClick={() => toggleSbrBlacklist(b.nik)}
+                              className={`px-2.5 py-1 rounded-lg font-semibold inline-flex items-center gap-1 ${
+                                b.isBlacklisted
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                              }`}
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                              <span>{b.isBlacklisted ? 'Pulihkan' : 'Blacklist'}</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -362,16 +368,18 @@ export const SbrView: React.FC = () => {
                           <Eye className="w-4 h-4" />
                           <span>Detail</span>
                         </button>
-                        <button
-                          onClick={() => togglePartnerBlacklist(p.id)}
-                          className={`px-3 py-1 rounded-lg font-semibold ${
-                            p.isBlacklisted
-                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
-                          }`}
-                        >
-                          {p.isBlacklisted ? 'Cabut Blacklist' : 'Blacklist'}
-                        </button>
+                        {policy.canTogglePartnerBlacklist && (
+                          <button
+                            onClick={() => togglePartnerBlacklist(p.id)}
+                            className={`px-3 py-1 rounded-lg font-semibold ${
+                              p.isBlacklisted
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                            }`}
+                          >
+                            {p.isBlacklisted ? 'Cabut Blacklist' : 'Blacklist'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -551,7 +559,7 @@ export const SbrView: React.FC = () => {
       <Modal
         isOpen={Boolean(detailSbr)}
         onClose={() => setDetailSbrNik(null)}
-        title={`Detail Penerima Manfaat (SBR) — ${detailSbr?.nik || ''}`}
+        title={`Detail Penerima Manfaat (SBR) — ${detailSbr ? maskNik(detailSbr.nik, userRole) : ''}`}
         maxWidth="max-w-3xl"
         footer={
           detailSbr && (
@@ -562,17 +570,19 @@ export const SbrView: React.FC = () => {
               >
                 Tutup
               </button>
-              <button
-                onClick={() => toggleSbrBlacklist(detailSbr.nik)}
-                className={`px-4 py-2 rounded-lg font-semibold inline-flex items-center gap-1.5 ${
-                  detailSbr.isBlacklisted
-                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                    : 'bg-rose-700 hover:bg-rose-800 text-white'
-                }`}
-              >
-                <Ban className="w-4 h-4" />
-                <span>{detailSbr.isBlacklisted ? 'Pulihkan dari Blacklist' : 'Masukkan ke Blacklist'}</span>
-              </button>
+              {policy.canToggleSbrBlacklist && (
+                <button
+                  onClick={() => toggleSbrBlacklist(detailSbr.nik)}
+                  className={`px-4 py-2 rounded-lg font-semibold inline-flex items-center gap-1.5 ${
+                    detailSbr.isBlacklisted
+                      ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                      : 'bg-rose-700 hover:bg-rose-800 text-white'
+                  }`}
+                >
+                  <Ban className="w-4 h-4" />
+                  <span>{detailSbr.isBlacklisted ? 'Pulihkan dari Blacklist' : 'Masukkan ke Blacklist'}</span>
+                </button>
+              )}
             </>
           )
         }
@@ -581,7 +591,7 @@ export const SbrView: React.FC = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded">
-                NIK: {detailSbr.nik}
+                NIK: {maskNik(detailSbr.nik, userRole)} {!policy.canViewUnmaskedPii && '(Masked UU PDP)'}
               </span>
               {detailSbr.npwpOrNib && (
                 <span className="font-mono font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded">
@@ -674,16 +684,18 @@ export const SbrView: React.FC = () => {
               >
                 Tutup
               </button>
-              <button
-                onClick={() => togglePartnerBlacklist(detailPartner.id)}
-                className={`px-4 py-2 rounded-lg font-semibold ${
-                  detailPartner.isBlacklisted
-                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                    : 'bg-rose-700 hover:bg-rose-800 text-white'
-                }`}
-              >
-                {detailPartner.isBlacklisted ? 'Cabut Status Blacklist' : 'Masukkan ke Daftar Blacklist'}
-              </button>
+              {policy.canTogglePartnerBlacklist && (
+                <button
+                  onClick={() => togglePartnerBlacklist(detailPartner.id)}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    detailPartner.isBlacklisted
+                      ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                      : 'bg-rose-700 hover:bg-rose-800 text-white'
+                  }`}
+                >
+                  {detailPartner.isBlacklisted ? 'Cabut Status Blacklist' : 'Masukkan ke Daftar Blacklist'}
+                </button>
+              )}
             </>
           )
         }

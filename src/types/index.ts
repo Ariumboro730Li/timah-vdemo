@@ -19,6 +19,7 @@ export type UserRole =
   | 'pumk'
   | 'monev'
   | 'spi'
+  | 'sysadmin'
   | 'pemohon';
 
 export interface SocialMappingRegion {

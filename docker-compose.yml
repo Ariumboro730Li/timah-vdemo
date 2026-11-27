@@ -1,0 +1,17 @@
+# Docker Compose untuk Pengembangan Lokal (Vite HMR + Live data/snapshot.json)
+# Jalankan di lokal: docker compose up --build
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    container_name: timah-csr-local
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 3000

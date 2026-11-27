@@ -11,6 +11,7 @@ import {
   transformValidatedRows
 } from '../../utils/dataImportExport';
 import { useAppState } from '../../context/AppStateContext';
+import { getRolePolicy } from '../../utils/rbac';
 
 interface ImportDataModalProps {
   isOpen: boolean;
@@ -150,11 +151,16 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
               }}
               className="flex-1 px-3 py-2 border border-slate-200 rounded-lg bg-white font-semibold text-slate-800 outline-none focus:border-sky-500"
             >
-              {Object.values(IMPORT_DATASET_CONFIGS).map((c) => (
-                <option key={c.type} value={c.type}>
-                  {c.label} ({c.kakRef})
-                </option>
-              ))}
+              {Object.values(IMPORT_DATASET_CONFIGS)
+                .filter((c) => {
+                  const allowed = getRolePolicy(state.userRole).allowedImportTypes;
+                  return allowed.length === 0 || allowed.includes(c.type);
+                })
+                .map((c) => (
+                  <option key={c.type} value={c.type}>
+                    {c.label} ({c.kakRef})
+                  </option>
+                ))}
             </select>
           </div>
         )}

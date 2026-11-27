@@ -52,7 +52,25 @@ import {
   initialAuditLogs
 } from '../data/mockData';
 
+import {
+  getRkapApprovalPermission,
+  canRoleApproveByAuthority,
+  getCharityActionPermission
+} from '../utils/rbac';
+
 const LOCAL_STORAGE_KEY = 'timah_csr_snapshot_json_v1';
+const ROLE_STORAGE_KEY = 'timah_csr_active_role_v1';
+const VALID_ROLES: UserRole[] = [
+  'direksi',
+  'kadiv',
+  'perencanaan',
+  'implementasi',
+  'pumk',
+  'monev',
+  'spi',
+  'sysadmin',
+  'pemohon'
+];
 
 export type SyncStatus = 'loading' | 'saving' | 'saved' | 'local-fallback';
 
@@ -162,6 +180,7 @@ const roleDisplayMap: Record<UserRole, { name: string; title: string }> = {
   pumk: { name: 'Budi Santoso', title: 'Kabid Koperasi & PUMK' },
   monev: { name: 'Dedi Kurniawan', title: 'Koordinator Tim Monev' },
   spi: { name: 'Drs. Wahyu Pratama', title: 'Auditor SPI & MR' },
+  sysadmin: { name: 'Fajar Ramadhan', title: 'System Admin (TI)' },
   pemohon: { name: 'Masyarakat / Mitra Eksternal', title: 'Pemohon Portal' }
 };
 
@@ -273,7 +292,24 @@ function upsertSbrList(
 }
 
 export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [userRole, setUserRole] = useState<UserRole>('kadiv');
+  const [userRole, setUserRoleState] = useState<UserRole>(() => {
+    try {
+      const saved = localStorage.getItem(ROLE_STORAGE_KEY) as UserRole | null;
+      if (saved && VALID_ROLES.includes(saved)) return saved;
+    } catch {
+      // ignore storage errors
+    }
+    return 'kadiv';
+  });
+
+  const setUserRole = (nextRole: UserRole) => {
+    setUserRoleState(nextRole);
+    try {
+      localStorage.setItem(ROLE_STORAGE_KEY, nextRole);
+    } catch {
+      // ignore storage errors
+    }
+  };
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading');
   const [snapshot, setSnapshot] = useState<AppSnapshot>(() => {
@@ -494,6 +530,11 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const advanceRkapStatus = (id: string) => {
     const target = snapshotRef.current.rkapList.find((r) => r.id === id);
     if (!target) return;
+    const perm = getRkapApprovalPermission(userRole, target.status);
+    if (!perm.allowed) {
+      showToast(`Akses ditolak: Tahap ${target.status} hanya dapat disetujui oleh ${perm.requiredRoleLabel}.`, 'warning');
+      return;
+    }
     const flow: RkapItem['status'][] = ['Draft', 'Review Kabid', 'Review Kadiv', 'Disetujui Direksi'];
     const nextStatus = flow[Math.min(flow.indexOf(target.status) + 1, flow.length - 1)];
     commitMutation(
@@ -649,6 +690,13 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const prop = snapshotRef.current.proposals.find((p) => p.id === proposalId);
     if (!prop) return;
     const approver = getApproverByAmount(prop.requestedAmount);
+    if (!canRoleApproveByAuthority(userRole, approver)) {
+      showToast(
+        `Akses ditolak (Lampiran B KAK): Nilai Rp ${prop.requestedAmount.toLocaleString('id-ID')} memerlukan persetujuan ${approver}.`,
+        'warning'
+      );
+      return;
+    }
     commitMutation(
       (prev) => ({
         ...prev,
@@ -847,6 +895,11 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const advanceCharityStatus = (charityId: string) => {
     const item = snapshotRef.current.charities.find((c) => c.id === charityId);
     if (!item) return;
+    const perm = getCharityActionPermission(userRole, item);
+    if (!perm.allowed) {
+      showToast(`Akses ditolak (SOP 11.2 / Lampiran B): Tahap ini memerlukan ${perm.lockedReason}.`, 'warning');
+      return;
+    }
     const flow: CharityItem['disbursementStatus'][] = ['Verifikasi', 'Menunggu Persetujuan', 'Cair ke Penerima', 'BAST Selesai'];
     const nextStatus = flow[Math.min(flow.indexOf(item.disbursementStatus) + 1, flow.length - 1)];
     const bastNo = nextStatus === 'BAST Selesai' ? `BAST/${item.ticketNo}` : item.bastNo;
