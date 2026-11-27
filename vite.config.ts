@@ -142,7 +142,10 @@ function jsonSnapshotApiPlugin(): Plugin {
 export default defineConfig({
   plugins: [react(), tailwindcss(), jsonSnapshotApiPlugin()],
   server: {
-    port: 3000,
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    allowedHosts: true,
     open: false,
     watch: {
       ignored: ['**/data/snapshot.json', '**/data/snapshot.json.tmp']

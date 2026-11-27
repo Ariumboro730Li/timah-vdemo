@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: timah-web
+    restart: unless-stopped
+    ports:
+      - "80:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - timah-network
+
+networks:
+  timah-network:
+    name: timah-network
+    external: true
