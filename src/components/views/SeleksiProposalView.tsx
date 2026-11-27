@@ -663,7 +663,7 @@ export const SeleksiProposalView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                   <div>
                     <span className="text-slate-500 block">
-                      NIK Penanggung Jawab {!policy.canViewUnmaskedPii && '(Masked UU PDP)'}
+                      NIK Penanggung Jawab
                     </span>
                     <span className="font-mono font-bold text-slate-900">{maskNik(detailProposal.nik, userRole)}</span>
                   </div>

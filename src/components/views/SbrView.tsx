@@ -591,7 +591,7 @@ export const SbrView: React.FC = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded">
-                NIK: {maskNik(detailSbr.nik, userRole)} {!policy.canViewUnmaskedPii && '(Masked UU PDP)'}
+                NIK: {maskNik(detailSbr.nik, userRole)} 
               </span>
               {detailSbr.npwpOrNib && (
                 <span className="font-mono font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded">
