@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavView, UserRole } from '../../types';
 import {
+  LayoutDashboard,
   GitBranch,
   CalendarRange,
   FileCheck2,
@@ -49,6 +50,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badge?: string;
     badgeColor?: string;
   };
+
+  const allOverviewNavItems: SidebarNavItem[] = [
+    {
+      id: 'dashboard',
+      label: isPublic ? 'Ringkasan Publik CSR' : 'Dashboard',
+      icon: <LayoutDashboard className="w-4 h-4" />
+    }
+  ];
+
+  const overviewNavItems = allOverviewNavItems.filter((item) =>
+    isViewAllowedInJourney(userRole, activeJourney, item.id)
+  );
 
   const allProgramNavItems: SidebarNavItem[] = [
     {
@@ -160,6 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Journey-Scoped Navigation Groups */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        {renderGroup(isPublic ? 'Beranda Publik' : 'Utama', overviewNavItems)}
         {renderGroup(isPublic ? 'Layanan Pemohon' : `Modul ${journeyDef.label}`, programNavItems)}
         {renderGroup('Pengawasan & Data', governanceNavItems)}
       </div>

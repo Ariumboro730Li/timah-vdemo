@@ -598,7 +598,7 @@ export const ROLE_JOURNEY_PRESETS: Record<ActiveJourney, JourneyDefinition> = {
     label: 'Alur Proposal',
     shortLabel: 'Proposal',
     description: 'Fokus penuh pada pengajuan proposal masyarakat, seleksi & scoring, komite & approval, eksekusi SPK PPM / Charity & BAST, SBR/Aset, Monev, hingga Audit SPI.',
-    allowedViews: ['portal', 'seleksi', 'implementasi', 'sbr', 'monev', 'integrasi'],
+    allowedViews: ['dashboard', 'portal', 'seleksi', 'implementasi', 'sbr', 'monev', 'integrasi'],
     steps: [
       {
         role: 'pemohon',
@@ -649,7 +649,7 @@ export const ROLE_JOURNEY_PRESETS: Record<ActiveJourney, JourneyDefinition> = {
     label: 'Alur RKAP',
     shortLabel: 'RKAP',
     description: 'Fokus penuh pada penyusunan Social Mapping & Draft RKAP top-down, persetujuan berjenjang hingga Direksi, penurunan ke SPK PPM, Aset BAST, Monev Closed-Loop & Audit SPI.',
-    allowedViews: ['perencanaan', 'implementasi', 'sbr', 'monev', 'integrasi'],
+    allowedViews: ['dashboard', 'perencanaan', 'implementasi', 'sbr', 'monev', 'integrasi'],
     steps: [
       {
         role: 'perencanaan',
@@ -700,7 +700,7 @@ export const ROLE_JOURNEY_PRESETS: Record<ActiveJourney, JourneyDefinition> = {
     label: 'Alur PUMK',
     shortLabel: 'PUMK',
     description: 'Fokus penuh pada pembiayaan UMK & Koperasi: Onboarding 5C, survei lapangan, komite pendanaan, akad & angsuran Virtual Account, validasi SBR, Monev & Audit Risiko SPI.',
-    allowedViews: ['pumk', 'sbr', 'monev', 'integrasi'],
+    allowedViews: ['dashboard', 'pumk', 'sbr', 'monev', 'integrasi'],
     steps: [
       {
         role: 'pumk',
